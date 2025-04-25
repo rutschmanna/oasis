@@ -2,22 +2,14 @@
 name = "camel-oasis"
 version = "0.2.3"
 description = "Open Agents Social Interaction Simulations on a Large Scale"
-authors = ["CAMEL-AI.org"]
+authors = ["TODO <TODO@gmail.com>"]
 readme = "README.md"
-license = "Apache License 2.0"
 keywords = [
+    "LLM",
+    "agent",
+    "social-network",
+    "graph",
     "recommendation-system",
-    "communicative-ai",
-    "ai-societies",
-    "social-simulations",
-    "artificial-intelligence",
-    "deep-learning",
-    "multi-agent-systems",
-    "natural-language-processing",
-    "large-language-models",
-]
-packages = [
-    { include = "oasis" },
 ]
 repository = "https://github.com/camel-ai/oasis.git"
 
