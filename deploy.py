@@ -32,7 +32,7 @@ def check_port_open(host, port):
 
 
 if __name__ == "__main__":
-    host = "10.109.1.8"
+    host = "127.0.0.1"
     ports = [
         [8002, 8003, 8005],
         [8006, 8007, 8008],
@@ -54,10 +54,12 @@ if __name__ == "__main__":
             cmd = (
                 f"CUDA_VISIBLE_DEVICES={gpu} python -m "
                 f"vllm.entrypoints.openai.api_server --model "
-                f"'/ibex/user/yangz0h/open_source_llm/llama-3' "
-                f"--served-model-name 'llama-3' "
+                f"'meta-llama/Llama-3.2-3B-Instruct' "
+                #f"--served-model-name 'llama-3' "
+		f"--max-model-len 30000 "
+		f"--load-format bitsandbytes --quantization bitsandbytes "
                 f"--host {host} --port {ports[j][i]} --gpu-memory-utilization "
-                f"0.3 --disable-log-stats")
+                f"0.3 --disable-log-stats ")
             t = threading.Thread(target=subprocess.run,
                                  args=(cmd, ),
                                  kwargs={"shell": True},
