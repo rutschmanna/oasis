@@ -13,6 +13,7 @@
 # =========== Copyright 2023 @ CAMEL-AI.org. All Rights Reserved. ===========
 import asyncio
 import os
+import argparse
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -22,10 +23,18 @@ from oasis import ActionType, EnvAction, SingleAction
 
 
 async def main():
+    # Parse command line passed arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_type", help="str model type")
+    parser.add_argument("--ip", help="ip of vllm server", default="127.0.0.1")
+    parser.add_argument("--port", help="port of vllm entry", default="8002")
+    args = parser.parse_args()
+
     # Define the model for the agents
-    openai_model = ModelFactory.create(
-        model_platform=ModelPlatformType.OPENAI,
-        model_type=ModelType.GPT_4O_MINI,
+    llm_model = ModelFactory.create(
+        model_platform=ModelPlatformType.VLLM,
+        model_type=args.model_type,
+	url=f"http://{args.ip}:{args.port}/v1",
     )
 
     # Define the available actions for the agents
@@ -57,7 +66,7 @@ async def main():
         platform=oasis.DefaultPlatformType.REDDIT,
         database_path=db_path,
         agent_profile_path="./data/reddit/user_data_36.json",
-        agent_models=openai_model,
+        agent_models=llm_model,
         available_actions=available_actions,
     )
 
@@ -74,7 +83,7 @@ async def main():
                                 "content": "Welcome to the OASIS World!"
                             })
 
-    env_actions = EnvAction(activate_agents=list(range(10)),
+    env_actions = EnvAction(activate_agents=list(range(20)),
                             intervention=[action_1, action_2])
 
     # Perform the actions

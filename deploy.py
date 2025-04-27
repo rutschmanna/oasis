@@ -49,17 +49,20 @@ if __name__ == "__main__":
     print("All ports: ", all_ports, '\n\n')
 
     t = None
-    for i in range(3):
+    for i in range(1):
         for j, gpu in enumerate(gpus):
             cmd = (
                 f"CUDA_VISIBLE_DEVICES={gpu} python -m "
                 f"vllm.entrypoints.openai.api_server --model "
-                f"'meta-llama/Llama-3.2-3B-Instruct' "
-                #f"--served-model-name 'llama-3' "
-		f"--max-model-len 30000 "
+                f"'Qwen/Qwen2.5-7B-Instruct' "
+                f"--served-model-name 'qwen-2' "
+		#f"--max-model-len 10000 "
 		f"--load-format bitsandbytes --quantization bitsandbytes "
                 f"--host {host} --port {ports[j][i]} --gpu-memory-utilization "
-                f"0.3 --disable-log-stats ")
+                f"0.3 --disable-log-stats "
+		f"--enable-auto-tool-choice --tool-call-parser hermes "
+		#f"--disable-mm-preprocessor-cache --max-num-seqs=256 "
+		)
             t = threading.Thread(target=subprocess.run,
                                  args=(cmd, ),
                                  kwargs={"shell": True},
