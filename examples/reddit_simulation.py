@@ -25,9 +25,10 @@ from oasis import ActionType, EnvAction, SingleAction
 async def main():
     # Parse command line passed arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_type", help="str model type")
+    parser.add_argument("--model_type", help="str model type", default="qwen-2")
     parser.add_argument("--ip", help="ip of vllm server", default="127.0.0.1")
     parser.add_argument("--port", help="port of vllm entry", default="8002")
+    parser.add_argument("--time_steps", help="# of simulation steps",  type=int,  default="1")
     args = parser.parse_args()
 
     # Define the model for the agents
@@ -87,7 +88,8 @@ async def main():
                             intervention=[action_1, action_2])
 
     # Perform the actions
-    await env.step(env_actions)
+    for _ in range(args.time_steps):
+        await env.step(env_actions)
 
     # Close the environment
     await env.close()
