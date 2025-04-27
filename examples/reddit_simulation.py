@@ -25,7 +25,7 @@ from oasis import ActionType, EnvAction, SingleAction
 async def main():
     # Parse command line passed arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_type", help="str model type", default="qwen-2")
+    parser.add_argument("--model_type", help="str model type")
     parser.add_argument("--ip", help="ip of vllm server", default="127.0.0.1")
     parser.add_argument("--port", help="port of vllm entry", default="8002")
     parser.add_argument("--time_steps", help="# of simulation steps",  type=int,  default="1")
