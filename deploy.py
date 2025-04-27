@@ -14,9 +14,16 @@
 import subprocess
 import threading
 import time
-
+import argparse
 import requests
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--model_path", help="str model type or path")
+parser.add_argument("--model_name", help="str model name")
+parser.add_argument("--gpu_memory_utilization", help="float allowed gpu utilization", type=float, default=0.8)
+parser.add_argument("--max_model_len", help="int max model contect length", type=int, default=30000)
+parser.add_argument("--tool_call_parser", help="str tool-call-parser", default="llama3_json")
+args = parser.parse_args()
 
 def check_port_open(host, port):
     while True:
@@ -54,14 +61,14 @@ if __name__ == "__main__":
             cmd = (
                 f"CUDA_VISIBLE_DEVICES={gpu} python -m "
                 f"vllm.entrypoints.openai.api_server --model "
-                f"'Qwen/Qwen2.5-7B-Instruct' "
-                f"--served-model-name 'qwen-2' "
-		#f"--max-model-len 10000 "
-		f"--load-format bitsandbytes --quantization bitsandbytes "
+                f"'{args.model_path}' "
+                f"--served-model-name '{args.model_name}' "
+                f"--max-model-len {args.max_model_len} "
+                f"--load-format bitsandbytes --quantization bitsandbytes "
                 f"--host {host} --port {ports[j][i]} --gpu-memory-utilization "
-                f"0.3 --disable-log-stats "
-		f"--enable-auto-tool-choice --tool-call-parser hermes "
-		#f"--disable-mm-preprocessor-cache --max-num-seqs=256 "
+                f"{args.gpu_memory_utilization} --disable-log-stats "
+                f"--enable-auto-tool-choice --tool-call-parser {args.tool_call_parser} "
+                #f"--disable-mm-preprocessor-cache --max-num-seqs=256 "
 		)
             t = threading.Thread(target=subprocess.run,
                                  args=(cmd, ),
