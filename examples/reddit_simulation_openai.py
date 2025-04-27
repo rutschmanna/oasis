@@ -13,6 +13,7 @@
 # =========== Copyright 2023 @ CAMEL-AI.org. All Rights Reserved. ===========
 import asyncio
 import os
+import argparse
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -23,10 +24,18 @@ from oasis import (ActionType, LLMAction, ManualAction,
 
 
 async def main():
+    # Parse command line passed arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_type", help="str model type")
+    parser.add_argument("--ip", help="ip of vllm server", default="127.0.0.1")
+    parser.add_argument("--port", help="port of vllm entry", default="8002")
+    args = parser.parse_args()
+
     # Define the model for the agents
-    openai_model = ModelFactory.create(
-        model_platform=ModelPlatformType.OPENAI,
-        model_type=ModelType.GPT_4O_MINI,
+    llm_model = ModelFactory.create(
+        model_platform=ModelPlatformType.VLLM,
+        model_type=args.model_type,
+	url=f"http://{args.ip}:{args.port}/v1",
     )
 
     # Define the available actions for the agents
