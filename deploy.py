@@ -18,11 +18,12 @@ import argparse
 import requests
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model_path", help="str model type or path")
-parser.add_argument("--model_name", help="str model name")
-parser.add_argument("--gpu_memory_utilization", help="float allowed gpu utilization", type=float, default=0.8)
-parser.add_argument("--max_model_len", help="int max model contect length", type=int, default=30000)
-parser.add_argument("--tool_call_parser", help="str tool-call-parser", default="llama3_json")
+parser.add_argument("--model-path", help="str model type or path")
+parser.add_argument("--model-name", help="str model name")
+parser.add_argument("--gpu-memory-utilization", help="float allowed gpu utilization", type=float, default=0.8)
+parser.add_argument("--max-model-len", help="int max model contect length", type=int, default=30000)
+parser.add_argument("--tool-call-parser", help="str tool-call-parser", default="llama3_json")
+parser.add_argument("--open-args", help="additional vllm args", default="")
 args = parser.parse_args()
 
 def check_port_open(host, port):
@@ -68,6 +69,7 @@ if __name__ == "__main__":
                 f"--host {host} --port {ports[j][i]} --gpu-memory-utilization "
                 f"{args.gpu_memory_utilization} --disable-log-stats "
                 f"--enable-auto-tool-choice --tool-call-parser {args.tool_call_parser} "
+                f"{args.open_args} "
                 #f"--disable-mm-preprocessor-cache --max-num-seqs=256 "
 		)
             t = threading.Thread(target=subprocess.run,
