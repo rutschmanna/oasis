@@ -14,6 +14,7 @@
 import asyncio
 import os
 import argparse
+import time
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType

@@ -35,22 +35,17 @@ class SocialEnvironment(Environment):
     follows_env_template = Template("I have $num_follows follows.")
 
     posts_env_template = Template(
-        "After refreshing, you see some posts $posts")
-
-    groups_env_template = Template(
-        "And there are many group chat channels $all_groups\n"
-        "And You are already in some groups $joined_groups\n"
-        "You receive some messages from them $messages\n"
-        "You can join the groups you are interested, "
-        "leave the groups you already in, send messages to the group "
-        "you already in.\n"
-        "You must make sure you can only send messages to the group you "
-        "are already in")
+         "After refreshing, you see these posts: $posts")
     env_template = Template(
-        "$groups_env\n"
-        "$posts_env\npick one you want to perform action that best "
-        "reflects your current inclination based on your profile and "
-        "posts content. Do not limit your action in just `like` to like posts")
+        "$posts_env\nPick and perform the action that best fits the situation "
+        "based on your profile and the content of the previous posts. Take "
+        "advantage of the broad set of performable actions and do not limit "
+        "yourself to any single action.")
+        
+        #"$posts_env\npick one you want to perform action that best "
+        #"reflects your current inclination based on your profile and "
+        #"posts content. Do not limit your action in just `like` to like posts")
+
 
     def __init__(self, action: SocialAction):
         self.action = action
@@ -121,6 +116,7 @@ class SocialEnvironment(Environment):
         include_followers: bool = True,
         include_follows: bool = True,
     ) -> str:
+        # TODO Implement Reddit Scores such as Karma, etc.
         followers_env = (await self.get_followers_env()
                          if include_follows else "No followers.")
         follows_env = (await self.get_follows_env()
