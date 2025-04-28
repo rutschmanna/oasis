@@ -57,7 +57,7 @@ async def main():
     ]
 
     # Define the path to the database
-    db_path = f"./data/reddit_sim-{args.model_type}-{time.strftime('%H-%M', time.localtime())}.db"
+    db_path = f"./data/dbs/reddit_sim-{args.model_type}-{time.strftime('%H-%M', time.localtime())}.db"
 
     # Delete the old database
     if os.path.exists(db_path):
