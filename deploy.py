@@ -16,6 +16,7 @@ import threading
 import time
 import argparse
 import requests
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model-path", help="str model type or path")
@@ -25,6 +26,9 @@ parser.add_argument("--max-model-len", help="int max model contect length", type
 parser.add_argument("--tool-call-parser", help="str tool-call-parser", default="llama3_json")
 parser.add_argument("--open-args", help="additional vllm args", default="")
 args = parser.parse_args()
+
+if not (args.model_path and args.model_name):
+    sys.exit("Provide --model-path and --model-name")
 
 def check_port_open(host, port):
     while True:

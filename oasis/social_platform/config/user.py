@@ -75,14 +75,18 @@ Please perform actions by tool calling.
                 description = f"{name_string}\n{description_string}"
                 print(self.profile['other_info'])
                 description += (
-                    f"You are a {self.profile['other_info']['gender']}, "
-                    f"{self.profile['other_info']['age']} years old, with an MBTI "
-                    f"personality type of {self.profile['other_info']['mbti']} from "
-                    f"{self.profile['other_info']['country']}.")
+                    f"You are a {self.profile['other_info']['age']} year old "
+                    f"{self.profile['other_info']['gender']} " 
+                    f"from {self.profile['other_info']['country']}.")
+
+                    #f"You are a {self.profile['other_info']['gender']}, "
+                    #f"{self.profile['other_info']['age']} years old, with an MBTI "
+                    #f"personality type of {self.profile['other_info']['mbti']} from "
+                    #f"{self.profile['other_info']['country']}."
 
         system_content = f"""
 # OBJECTIVE
-You're a Reddit user, and I'll present you with some tweets. After you see the tweets, choose some actions from the following functions.
+You're a Reddit user, and I'll present you with some posts. After you see these posts, choose one of the following actions.
 
 # SELF-DESCRIPTION
 Your actions should be consistent with your self-description and personality.

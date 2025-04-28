@@ -14,6 +14,7 @@
 import asyncio
 import os
 import argparse
+import time
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -56,7 +57,7 @@ async def main():
     ]
 
     # Define the path to the database
-    db_path = "./data/reddit_simulation.db"
+    db_path = f"./data/reddit_sim-{args.model_type}-{time.strftime('%H-%M', time.localtime())}.db"
 
     # Delete the old database
     if os.path.exists(db_path):
@@ -76,12 +77,12 @@ async def main():
 
     action_1 = SingleAction(agent_id=0,
                             action=ActionType.CREATE_POST,
-                            args={"content": "Hello, world!"})
+                            args={"content": "Fur clothing should be banned." })
     action_2 = SingleAction(agent_id=0,
                             action=ActionType.CREATE_COMMENT,
                             args={
                                 "post_id": "1",
-                                "content": "Welcome to the OASIS World!"
+                                "content": "Remember to be civil!"
                             })
 
     env_actions = EnvAction(activate_agents=list(range(20)),
