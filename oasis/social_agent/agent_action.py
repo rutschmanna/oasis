@@ -23,71 +23,35 @@ class SocialAction:
 
     def __init__(self, agent_id: int, channel: Channel):
         self.agent_id = agent_id
-        self.channel = channel
-    
+        self.channel = channel    
+
     def get_openai_function_list(self) -> list[FunctionTool]:
         return [
             FunctionTool(func) for func in [
-                self.refresh,
-                self.search_user,
-                self.search_posts,
                 self.create_post,
                 self.like_post,
+                self.repost,
+                self.quote_post,
                 self.unlike_post,
-                self.upvote_post,
-                self.undo_upvote_post,
                 self.dislike_post,
                 self.undo_dislike_post,
-                self.downvote_post,
-                self.undo_downvote_post,
+                self.search_posts,
+                self.search_user,
+                self.trend,
+                self.refresh,
+                self.do_nothing,
+                self.create_comment,
+                self.like_comment,
+                self.dislike_comment,
+                self.unlike_comment,
+                self.undo_dislike_comment,
                 self.follow,
                 self.unfollow,
                 self.mute,
                 self.unmute,
-                self.trend,
-                self.repost,
-                self.quote_post,
-                self.create_comment,
-                self.like_comment,
-                self.unlike_comment,
-                self.upvote_comment,
-                self.undo_upvote_comment,
-                self.dislike_comment,
-                self.undo_dislike_comment,
-                self.downvote_comment,
-                self.undo_downvote_comment,
-                self.do_nothing,
                 self.purchase_product,
             ]
         ]
-
-   # def get_openai_function_list(self) -> list[FunctionTool]:
-   #     return [
-   #         FunctionTool(func) for func in [
-   #             self.create_post,
-   #             self.like_post,
-   #             self.repost,
-   #             self.quote_post,
-   #             self.unlike_post,
-   #             self.dislike_post,
-   #             self.undo_dislike_post,
-   #             self.search_posts,
-   #             self.search_user,
-   #             self.trend,
-   #             self.refresh,
-   #             self.do_nothing,
-   #             self.create_comment,
-   #             self.like_comment,
-   #             self.dislike_comment,
-   #             self.unlike_comment,
-   #             self.undo_dislike_comment,
-   #             self.follow,
-   #             self.unfollow,
-   #             self.mute,
-   #             self.unmute,
-   #             self.purchase_product,
-   #         ]
-   #     ]
 
     async def perform_action(self, message: Any, type: str):
         message_id = await self.channel.write_to_receive_queue(
