@@ -37,8 +37,7 @@ class SocialEnvironment(Environment):
     env_template = Template(
         "$posts_env\nPick and perform the action that best fits the situation "
         "based on your profile and the content of the previous posts. Take "
-        "advantage of the broad set of performable actions and do not limit "
-        "yourself to any single action.")
+        "full advantage of the broad set of performable actions.")
         
         #"$posts_env\npick one you want to perform action that best "
         #"reflects your current inclination based on your profile and "

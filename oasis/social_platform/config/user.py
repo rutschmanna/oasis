@@ -71,7 +71,8 @@ Please perform actions by tool calling.
         elif "user_profile" in self.profile["other_info"]:
             if self.profile["other_info"]["user_profile"] is not None:
                 user_profile = self.profile["other_info"]["user_profile"]
-                description_string = f"Your have profile: {user_profile}."
+                description_string = f"Your profile: {user_profile}."
+              # description_string = f"Your have profile: {user_profile}."
                 description = f"{name_string}\n{description_string}"
                 print(self.profile['other_info'])
                 description += (
@@ -79,10 +80,10 @@ Please perform actions by tool calling.
                     f"{self.profile['other_info']['gender']} " 
                     f"from {self.profile['other_info']['country']}.")
 
-                    #f"You are a {self.profile['other_info']['gender']}, "
-                    #f"{self.profile['other_info']['age']} years old, with an MBTI "
-                    #f"personality type of {self.profile['other_info']['mbti']} from "
-                    #f"{self.profile['other_info']['country']}."
+                 #  f"You are a {self.profile['other_info']['gender']}, "
+                 #  f"{self.profile['other_info']['age']} years old, with an MBTI "
+                 #  f"personality type of {self.profile['other_info']['mbti']} from "
+                 #  f"{self.profile['other_info']['country']}."
 
         system_content = f"""
 # OBJECTIVE
