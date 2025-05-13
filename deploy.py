@@ -59,6 +59,8 @@ if __name__ == "__main__":
 
     all_ports = [port for i in gpus for port in ports[i]]
     print("All ports: ", all_ports, '\n\n')
+    
+    rope_scaling = '{"rope_type":"yarn","factor":4.0,"original_max_position_embeddings":32768}'
 
     t = None
     for i in range(1):
@@ -68,14 +70,16 @@ if __name__ == "__main__":
                 f"vllm.entrypoints.openai.api_server --model "
                 f"'{args.model_path}' "
                 f"--served-model-name '{args.model_name}' "
-                f"--max-model-len {args.max_model_len} "
-                f"--load-format bitsandbytes --quantization bitsandbytes "
+                #f"--max-model-len {args.max_model_len} "
+                #f"--load-format bitsandbytes --quantization bitsandbytes "
                 f"--host {host} --port {ports[j][i]} --gpu-memory-utilization "
                 f"{args.gpu_memory_utilization} --disable-log-stats "
                 f"--enable-auto-tool-choice --tool-call-parser {args.tool_call_parser} "
+                f"--rope-scaling '{rope_scaling}' "
+                f"--max-model-len {args.max_model_len} "
                 f"{args.open_args} "
                 #f"--disable-mm-preprocessor-cache --max-num-seqs=256 "
-		)
+                )
             t = threading.Thread(target=subprocess.run,
                                  args=(cmd, ),
                                  kwargs={"shell": True},

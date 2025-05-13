@@ -36,8 +36,12 @@ class SocialEnvironment(Environment):
          "After refreshing, you see these posts: $posts")
     env_template = Template(
         "$posts_env\nPick and perform the action that best fits the situation "
-        "based on your profile and the content of the previous posts. Take "
-        "full advantage of the broad set of performable actions.")
+        "based on the information provided in your profile and the content of "
+        "the previous posts. Take full advantage of the broad set of available "
+        "actions and do not limit yourself to any single one of them.\n"
+        "Please make sure to also comment on the comments of other network"
+        "users and generate a believable conversation structure."
+        )
         
         #"$posts_env\npick one you want to perform action that best "
         #"reflects your current inclination based on your profile and "

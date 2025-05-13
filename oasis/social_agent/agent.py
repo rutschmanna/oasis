@@ -112,10 +112,15 @@ class SocialAgent(ChatAgent):
         user_msg = BaseMessage.make_user_message(
             role_name="User",
             content=(
-                f"Please perform social media actions after observing the "
-                f"platform environments. Notice that don't limit your "
-                f"actions for example to just like the posts. "
-                f"Here is your social media environment: {env_prompt}"))
+                f"Please perform a social media typical action after observing the "
+                f"platform environment. Take advantage of the full scope of "
+                f"actions and do not limit yourself to any single one of them. "
+                f"This is your social media environment: {env_prompt}"))
+                
+               # f"Please perform social media actions after observing the "
+               # f"platform environments. Notice that don't limit your "
+               # f"actions for example to just like the posts. "
+               # f"Here is your social media environment: {env_prompt}"
         try:
             agent_log.info(
                 f"Agent {self.social_agent_id} observing environment: "

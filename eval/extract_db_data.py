@@ -1,5 +1,6 @@
 import sqlite3
 import argparse
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--db-file", help="Source Database", type=str)
@@ -13,14 +14,26 @@ def print_db_contents(db_file):
     tables = cursor.fetchall()
     print("Tables: ", [table[0] for table in tables])
 
-    table_selection = [input("Select tables to print: ")]
+    table_selection = input("Input table to print or 'exit': ")
 
-    for table_name in table_selection:
-        print(f"\nTable: {table_name[0]}")
-        cursor.execute(f"PRAGMA table_info({table_name[0]})")
-        columns = cursor.fetchall()
+    query = "SELECT * FROM {}".format(table_selection)
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    json_content = []
+    for row in rows:
+        print(" ", row)
+        json_content.append(row)
 
-        for col in columns:
-            print("")
+    conn.close()
 
-print_db_contents(args.db_file)
+    with open("data/db_json.json", "w") as f:
+        json.dump(json_content, f, indent=4
+
+                  with open("data/db_json.json", "w") as f:
+                  json.dump(json_content, f, indent=4))
+
+while True:
+    try:
+        print_db_contents(f"data/dbs/{args.db_file}")
+    except:
+        break
