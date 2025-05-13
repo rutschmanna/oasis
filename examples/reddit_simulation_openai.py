@@ -13,8 +13,6 @@
 # =========== Copyright 2023 @ CAMEL-AI.org. All Rights Reserved. ===========
 import asyncio
 import os
-import argparse
-import time
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -24,20 +22,11 @@ from oasis import (ActionType, LLMAction, ManualAction,
                    generate_reddit_agent_graph)
 
 async def main():
-    # Parse command line passed arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model-name", help="str model name")
-    parser.add_argument("--ip", help="ip of vllm server", default="127.0.0.1")
-    parser.add_argument("--port", help="port of vllm entry", default="8002")
-    parser.add_argument("--time-steps", help="# of simulation steps",  type=int,  default="1")
-    parser.add_argument("--print-db", help="boolean to print db", type=bool, default=False)
-    args = parser.parse_args()
-
     # Define the model for the agents
-    llm_model = ModelFactory.create(
+    openai_model = ModelFactory.create(
         model_platform=ModelPlatformType.VLLM,
-        model_type=args.model_name,
-	    url=f"http://{args.ip}:{args.port}/v1",
+        model_type="qwen",
+        url="http://127.0.0.1:8002/v1"
     )
 
     # Define the available actions for the agents
@@ -53,6 +42,11 @@ async def main():
     db_path = "./data/reddit_simulation.db"
     os.environ["OASIS_DB_PATH"] = os.path.abspath(db_path)
 
+    # Delete the old database
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    # Make the environment
     env = oasis.make(
         agent_graph=agent_graph,
         platform=oasis.DefaultPlatformType.REDDIT,
@@ -91,9 +85,6 @@ async def main():
     # Close the environment
     await env.close()
 
-    if args.print_db:
-        from oasis.testing.show_db import print_db_contents
-        print_db_contents(db_path)
 
 if __name__ == "__main__":
     asyncio.run(main())
