@@ -47,10 +47,14 @@ async def main():
     available_actions = [
         ActionType.LIKE_POST,
         ActionType.DISLIKE_POST,
-        ActionType.CREATE_POST,
+        ActionType.UNLIKE_POST,
+        ActionType.UNDO_DISLIKE_POST,
+        # ActionType.CREATE_POST,
         ActionType.CREATE_COMMENT,
         ActionType.LIKE_COMMENT,
         ActionType.DISLIKE_COMMENT,
+        ActionType.UNLIKE_COMMENT,
+        ActionType.UNDO_DISLIKE_COMMENT,
         ActionType.SEARCH_POSTS,
         ActionType.SEARCH_USER,
         ActionType.TREND,
@@ -58,6 +62,7 @@ async def main():
         ActionType.DO_NOTHING,
         ActionType.FOLLOW,
         ActionType.MUTE,
+        ActionType.UNMUTE,
     ]
 
     # Define the path to the database
