@@ -61,7 +61,7 @@ async def main():
     ]
 
     # Define the path to the database
-    db_path = f"./data/dbs/reddit_sim-{args.model_name}-{time.strftime('%H-%M', time.localtime())}.db"
+    db_path = f"./data/dbs/reddit-sim_{args.model_name}_{time.strftime('%H-%M', time.localtime())}.db"
 
     env = oasis.make(
         platform=oasis.DefaultPlatformType.REDDIT,
