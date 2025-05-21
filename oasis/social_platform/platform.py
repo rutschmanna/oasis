@@ -1096,6 +1096,40 @@ class Platform:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    async def comment_comment(self, agent_id: int, comment_message: tuple):
+        post_id, parent_comment_id, content = comment_message
+        if self.recsys_type == RecsysType.REDDIT:
+            current_time = self.sandbox_clock.time_transfer(
+                datetime.now(), self.start_time)
+        else:
+            current_time = self.sandbox_clock.get_time_step()
+        try:
+            post_type_result = self.pl_utils._get_post_type(post_id)
+            if post_type_result['type'] == 'repost':
+                post_id = post_type_result['root_post_id']
+            user_id = agent_id
+
+            # Insert the comment record
+            comment_insert_query = (
+                "INSERT INTO comment (post_id, parent_comment_id, user_id, content, created_at) "
+                "VALUES (?, ?, ?, ?, ?)")
+            self.pl_utils._execute_db_command(
+                comment_insert_query,
+                (post_id, parent_comment_id, user_id, content, current_time),
+                commit=True,
+            )
+            comment_id = self.db_cursor.lastrowid
+
+            # Prepare information for the trace record
+            action_info = {"content": content, "comment_id": comment_id}
+            self.pl_utils._record_trace(user_id,
+                                        ActionType.COMMENT_COMMENT.value,
+                                        action_info, current_time)
+
+            return {"success": True, "comment_id": comment_id}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     async def like_comment(self, agent_id: int, comment_id: int):
         if self.recsys_type == RecsysType.REDDIT:
             current_time = self.sandbox_clock.time_transfer(
