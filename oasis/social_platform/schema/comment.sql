@@ -9,5 +9,6 @@ CREATE TABLE comment (
     num_likes INTEGER DEFAULT 0,
     num_dislikes INTEGER DEFAULT 0,
     FOREIGN KEY(post_id) REFERENCES post(post_id),
+    FOREIGN KEY(parent_comment_id) REFERENCES comment(comment_id),
     FOREIGN KEY(user_id) REFERENCES user(user_id)
 );

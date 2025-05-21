@@ -41,6 +41,7 @@ class SocialAction:
                 self.refresh,
                 self.do_nothing,
                 self.create_comment,
+                self.create_comment_comment,
                 self.like_comment,
                 self.dislike_comment,
                 self.unlike_comment,
@@ -503,9 +504,9 @@ class SocialAction:
         r"""Create a new comment for a specified post given content.
 
         This method creates a new comment based on the provided content and
-        associates it with the given post ID. Upon successful execution, it
-        returns a dictionary indicating success and the ID of the newly created
-        comment.
+        associates it with the given post ID. This creates structural width.
+        Upon successful execution, it returns a dictionary indicating success
+        and the ID of the newly created comment.
 
         Args:
             post_id (int): The ID of the post to which the new comment is to be
@@ -525,17 +526,16 @@ class SocialAction:
         return await self.perform_action(comment_message,
                                          ActionType.CREATE_COMMENT.value)
 
-    async def comment_comment(self, post_id: int, parent_comment_id: int, content: str):
-        r"""Create a sub-comment for a specified previous comment.
+    async def create_comment_comment(self, post_id: int, parent_comment_id: int, content: str):
+        r"""Create a child-comment for a specified parent-comment.
 
         This method creates a new comment based on the provided content and
-        associates it with the given comment ID. Upon successful execution, it
-        returns a dictionary indicating success and the ID of the newly created
-        comment.
+        associates it with the given comment ID. This creates structural depth.
+        Upon successful execution, it returns a dictionary indicating success
+        and the ID of the newly created comment.
 
         Args:
-            post_id (int): The ID of the post to which this and previous comments
-                are to be added.
+            post_id (int): The ID of the post to which the new comment is to be added.
             parent_comment_id (int): The ID of the direct parent comment to which the new 
                 comment is to be added.
             content (str): The content of the comment to be created.
@@ -551,7 +551,7 @@ class SocialAction:
         """
         comment_message = (post_id, parent_comment_id, content)
         return await self.perform_action(comment_message,
-                                         ActionType.CREATE_COMMENT.value)
+                                         ActionType.CREATE_COMMENT_COMMENT.value)
 
     async def like_comment(self, comment_id: int):
         r"""Create a new like for a specified comment.

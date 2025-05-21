@@ -1096,7 +1096,7 @@ class Platform:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def comment_comment(self, agent_id: int, comment_message: tuple):
+    async def create_comment_comment(self, agent_id: int, comment_message: tuple):
         post_id, parent_comment_id, content = comment_message
         if self.recsys_type == RecsysType.REDDIT:
             current_time = self.sandbox_clock.time_transfer(
@@ -1123,7 +1123,7 @@ class Platform:
             # Prepare information for the trace record
             action_info = {"content": content, "comment_id": comment_id}
             self.pl_utils._record_trace(user_id,
-                                        ActionType.COMMENT_COMMENT.value,
+                                        ActionType.CREATE_COMMENT_COMMENT.value,
                                         action_info, current_time)
 
             return {"success": True, "comment_id": comment_id}

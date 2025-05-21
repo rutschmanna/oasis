@@ -33,7 +33,7 @@ class SocialEnvironment(Environment):
     follows_env_template = Template("I have $num_follows follows.")
 
     posts_env_template = Template(
-         "After refreshing, you see this social media feed: $posts")
+         "After refreshing, you see this social media thread: $posts")
     env_template = Template(
         "$posts_env\nPick and perform the action that best fits the situation "
         "based on the information provided in your profile and the content of "
