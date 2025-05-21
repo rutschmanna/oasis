@@ -119,7 +119,7 @@ class PlatformUtils:
 
             # For each post, query its corresponding comments
             self.db_cursor.execute(
-                "SELECT comment_id, post_id, user_id, content, created_at, "
+                "SELECT comment_id, post_id, parent_comment_id, user_id, content, created_at, "
                 "num_likes, num_dislikes FROM comment WHERE post_id = ?",
                 (post_id, ),
             )
@@ -131,6 +131,8 @@ class PlatformUtils:
                 comment_id,
                 "post_id":
                 post_id,
+                "parent_comment_id":
+                parent_comment_id,
                 "user_id":
                 user_id,
                 "content":
@@ -146,6 +148,7 @@ class PlatformUtils:
             } for (
                 comment_id,
                 post_id,
+                parent_comment_id,
                 user_id,
                 content,
                 created_at,
