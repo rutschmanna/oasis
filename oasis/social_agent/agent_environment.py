@@ -33,14 +33,14 @@ class SocialEnvironment(Environment):
     follows_env_template = Template("I have $num_follows follows.")
 
     posts_env_template = Template(
-         "After refreshing, you see these posts: $posts")
+         "After refreshing, you see this social media feed: $posts")
     env_template = Template(
         "$posts_env\nPick and perform the action that best fits the situation "
         "based on the information provided in your profile and the content of "
-        "the previous posts. Take full advantage of the broad set of available "
+        "the discussion. Take full advantage of the broad set of available "
         "actions and do not limit yourself to any single one of them.\n"
-        "Please make sure to also comment on the comments of other network"
-        "users and generate a believable conversation structure."
+        "It is vital for you to also comment on the comments of other network"
+        "users and generate a believable conversation structure (width & breadth)."
         )
         
         #"$posts_env\npick one you want to perform action that best "
