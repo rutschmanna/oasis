@@ -508,7 +508,7 @@ class SocialAction:
         comment.
 
         Args:
-            post_id (int): The ID of the post to which the comment is to be
+            post_id (int): The ID of the post to which the new comment is to be
                 added.
             content (str): The content of the comment to be created.
 
@@ -522,6 +522,34 @@ class SocialAction:
                 {'success': True, 'comment_id': 123}
         """
         comment_message = (post_id, content)
+        return await self.perform_action(comment_message,
+                                         ActionType.CREATE_COMMENT.value)
+
+    async def comment_comment(self, post_id: int, parent_comment_id: int, content: str):
+        r"""Create a sub-comment for a specified previous comment.
+
+        This method creates a new comment based on the provided content and
+        associates it with the given comment ID. Upon successful execution, it
+        returns a dictionary indicating success and the ID of the newly created
+        comment.
+
+        Args:
+            post_id (int): The ID of the post to which this and previous comments
+                are to be added.
+            parent_comment_id (int): The ID of the direct parent comment to which the new 
+                comment is to be added.
+            content (str): The content of the comment to be created.
+
+        Returns:
+            dict: A dictionary with two key-value pairs. The 'success' key
+                maps to a boolean indicating whether the comment creation was
+                successful. The 'comment_id' key maps to the integer ID of the
+                newly created comment.
+
+            Example of a successful return:
+                {'success': True, 'comment_id': 123}
+        """
+        comment_message = (post_id, parent_comment_id, content)
         return await self.perform_action(comment_message,
                                          ActionType.CREATE_COMMENT.value)
 
