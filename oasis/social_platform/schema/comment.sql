@@ -2,6 +2,7 @@
 CREATE TABLE comment (
     comment_id INTEGER PRIMARY KEY AUTOINCREMENT,
     post_id INTEGER,
+    parent_comment_id INTEGER Default -1,
     user_id INTEGER,
     content TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
