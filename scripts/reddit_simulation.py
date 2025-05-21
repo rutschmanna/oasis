@@ -55,6 +55,7 @@ async def main():
         ActionType.DISLIKE_COMMENT,
         ActionType.UNLIKE_COMMENT,
         ActionType.UNDO_DISLIKE_COMMENT,
+        ActionType.COMMENT_COMMENT,
         ActionType.SEARCH_POSTS,
         ActionType.SEARCH_USER,
         ActionType.TREND,
