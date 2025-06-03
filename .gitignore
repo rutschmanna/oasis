@@ -97,5 +97,7 @@ models/
 *.db
 *.sqlite3
 *.sqlite
+dbs/
+db_json/
 
 tmp
