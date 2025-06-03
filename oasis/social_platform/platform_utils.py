@@ -65,7 +65,7 @@ class PlatformUtils:
             print(f"Error querying user_id for agent_id {agent_id}: {e}")
             return None
 
-    def _add_comments_to_posts(self, posts_results):
+    def _add_comments_to_posts(self, posts_results, recsys_type):
         # Initialize the returned posts list
         posts = []
         for row in posts_results:
@@ -143,6 +143,24 @@ class PlatformUtils:
                 num_likes,
                 num_dislikes,
             ) in comments_results]
+
+            def build_comment_thread(comments, parent_id=-1):
+                """
+                Recursively builds the reddit specific thread structure of posts,
+                comments and child-comments and feed this a environment to the model.
+                """
+                thread = []
+                for comment in comments:
+                    if comment["parent_comment_id"] == parent_id:
+                        children = build_comment_thread(comments, comment["comment_id"])
+                        comment_thread = comment
+                        if children:
+                            comment_thread["comments"] = children
+                        thread.append(comment_thread)
+                return thread
+                
+            if recsys_type == RecsysType.REDDIT:
+                comments = build_comment_thread(comments)
 
             # Add post information and corresponding comments to the posts list
             posts.append({

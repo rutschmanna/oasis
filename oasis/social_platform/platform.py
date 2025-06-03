@@ -310,7 +310,7 @@ class Platform:
             if not results:
                 return {"success": False, "message": "No posts found."}
             results_with_comments = self.pl_utils._add_comments_to_posts(
-                results)
+                results, self.recsys_type)
 
             action_info = {"posts": results_with_comments}
             # twitter_log.info(action_info)

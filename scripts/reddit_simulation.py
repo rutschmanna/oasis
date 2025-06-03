@@ -1,16 +1,3 @@
-# =========== Copyright 2023 @ CAMEL-AI.org. All Rights Reserved. ===========
-# Licensed under the Apache License, Version 2.0 (the “License”);
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an “AS IS” BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# =========== Copyright 2023 @ CAMEL-AI.org. All Rights Reserved. ===========
 import asyncio
 import os
 import argparse
@@ -32,8 +19,9 @@ async def main():
     parser.add_argument("--model-name", help="str model name")
     parser.add_argument("--ip", help="ip of vllm server", default="127.0.0.1")
     parser.add_argument("--port", help="port of vllm entry", default="8002")
-    parser.add_argument("--time-steps", help="# of simulation steps",  type=int,  default="1")
+    parser.add_argument("--time-steps", help="# of simulation steps",  type=int,  default="3")
     parser.add_argument("--print-db", help="boolean to print db", type=bool, default=False)
+    parser.add_argument("--persona-file", help="file containing personas", type=str, default="dp1")
     args = parser.parse_args()
 
     # Define the model for the agents
@@ -45,19 +33,19 @@ async def main():
 
     # Define the available actions for the agents
     available_actions = [
-        # ActionType.LIKE_POST,
-        # ActionType.DISLIKE_POST,
-        # ActionType.UNLIKE_POST,
-        # ActionType.UNDO_DISLIKE_POST,
+        ActionType.LIKE_POST,
+        ActionType.DISLIKE_POST,
+        ActionType.UNLIKE_POST,
+        ActionType.UNDO_DISLIKE_POST,
         # ActionType.CREATE_POST,
-        # ActionType.CREATE_COMMENT,
-        # ActionType.LIKE_COMMENT,
-        # ActionType.DISLIKE_COMMENT,
-        # ActionType.UNLIKE_COMMENT,
-        # ActionType.UNDO_DISLIKE_COMMENT,
+        ActionType.CREATE_COMMENT,
+        ActionType.LIKE_COMMENT,
+        ActionType.DISLIKE_COMMENT,
+        ActionType.UNLIKE_COMMENT,
+        ActionType.UNDO_DISLIKE_COMMENT,
         ActionType.CREATE_COMMENT_COMMENT,
-        # ActionType.SEARCH_POSTS,
-        # ActionType.SEARCH_USER,
+        ActionType.SEARCH_POSTS,
+        ActionType.SEARCH_USER,
         # ActionType.TREND,
         # ActionType.REFRESH,
         ActionType.DO_NOTHING,
@@ -67,12 +55,12 @@ async def main():
     ]
 
     # Define the path to the database
-    db_path = f"./data/dbs/reddit-sim_{args.model_name}_{time.strftime('%H-%M', time.localtime())}.db"
+    db_path = f"./data/dbs/reddit-sim_{args.persona_file}_{args.model_name}-{args.time_steps}h_{time.strftime('%H-%M', time.localtime())}.db"
 
     env = oasis.make(
         platform=oasis.DefaultPlatformType.REDDIT,
         database_path=db_path,
-        agent_profile_path="./data/reddit/test_personas.json",
+        agent_profile_path=f"data/reddit/{args.persona_file}_personas.json",
         agent_models=llm_model,
         available_actions=available_actions,
     )
@@ -93,37 +81,17 @@ async def main():
                 }
             )
 
-    action_2 = SingleAction(
-            agent_id=0,
-            action=ActionType.CREATE_COMMENT,
-            args={
-                "post_id": 0,
-                "content": (
-                    "I disagree! Leftist bullshit!"
-                    )
-                }
-            )
-
-    action_3 = SingleAction(
-            agent_id=0,
-            action=ActionType.CREATE_COMMENT_COMMENT,
-            args={
-                "post_id": 0,
-                "parent_comment_id": 0,
-                "content": (
-                    "Stupid right-wing bastard! Rethink your worldviews!"
-                    )
-                }
-            )
-    
-    env_action_1 = EnvAction(activate_agents=[0, 3],
-                             intervention=[action_1, action_2, action_3])
+    # env_action_1 = EnvAction(activate_agents=list(random.sample(range(110), 2)),
+    #                          intervention=[action_1])
+    env_action_1 = EnvAction(activate_agents=su.activation_function()),
+                             intervention=[action_1])
 
     # Perform the actions
     await env.step(env_action_1)
     
     for _ in range(args.time_steps):
-        env_action_empty = EnvAction(activate_agents=list(random.sample(range(110), 10)))
+        # env_action_empty = EnvAction(activate_agents=list(random.sample(range(110), 10)))
+        env_action_empty = EnvAction(activate_agents=su.activation_function())
         await env.step(env_action_empty)
 
     # Close the environment
