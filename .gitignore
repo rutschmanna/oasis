@@ -100,4 +100,7 @@ models/
 dbs/
 db_json/
 
+# Secrets
+*_secret.txt
+
 tmp
