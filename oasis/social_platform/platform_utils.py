@@ -147,7 +147,7 @@ class PlatformUtils:
             def build_comment_thread(comments, parent_id=-1):
                 """
                 Recursively builds the reddit specific thread structure of posts,
-                comments and child-comments and feed this a environment to the model.
+                comments and child-comments and feed this as environment to the model.
                 """
                 thread = []
                 for comment in comments:
@@ -184,7 +184,7 @@ class PlatformUtils:
                 "comments":
                 comments,
             })
-        return posts
+        return posts[-1] # [-1] This enforces a single thread environment
 
     def _record_trace(self,
                       user_id,

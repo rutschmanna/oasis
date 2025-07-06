@@ -1,0 +1,130 @@
+import sqlite3
+import pandas as pd
+import random
+from datetime import datetime, timedelta
+import scipy.stats
+import numpy as np
+
+def activation_function(
+    data,
+    db_path,
+    env,
+    mapping_type="comments",
+    print_info=True,
+    initiation_ie_time=3600,
+    inter_burst_time=3600*3,
+    distribution_type="lognorm",
+    sigma=2.759,
+    mu=8.465,
+    recurring_activation_prob_modifier=0.3
+):
+    """
+    Determines the activation of LLM agents in the OASIS simulation.
+    Each agent is assigned a probability of activation depending
+    on the seed user's self reported online behavior.
+
+    Parameters
+    data: seed user data (contains self-reported online behavior)
+        indexed by ParticipantID (seed_id)
+    db_path: path to OASIS simulation data base
+    """
+
+    current_time = env.sandbox_clock.time_transfer(
+                datetime.now(), env.start_time)
+    
+    if mapping_type == "comments":
+        mapping = {
+            1: 0.005,  # never
+            2: 0.0075, # once per month
+            3: 0.03,   # once per week
+            4: 0.05,   # almost daily
+            5: 0.1,    # multiple times a day
+        }
+    elif mapping_type == "social_media": # very high!
+        mapping = {
+            1: 0.01, # not at all
+            2: 0.03, # a couple of times per week
+            3: 0.08, # about once per day
+            4: 0.12, # multiple times per day
+            5: 0.15, # almost constantly
+        }
+    
+    # Create empty list to hold IDs of activated agents
+    activated_agents_step = []
+
+    # Access content from "live" db
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # User data
+    cursor.execute("SELECT user_id, user_name FROM user")
+
+    rows = cursor.fetchall()
+    columns = [col[0] for col in cursor.description]
+    db_content = [dict(zip(columns, row)) for row in rows]
+
+    # Comment data
+    cursor.execute("SELECT user_id, created_at FROM comment")
+
+    rows = cursor.fetchall()
+    columns = [col[0] for col in cursor.description]
+    previous_activations = [dict(zip(columns, row)) for row in rows]
+    
+    conn.close()
+
+    activated_agents = {}
+
+    for i in previous_activations:
+        timestamp_str = i["created_at"]
+        timestamp = datetime.fromisoformat(timestamp_str)
+        if i["user_id"] not in activated_agents.keys():
+            activated_agents[i["user_id"]] = [timestamp]
+        else:
+            activated_agents[i["user_id"]].append(timestamp)
+    
+    # Decide agent activation
+    for i in db_content:
+        i["comments_online"] = data.at[i["user_name"], "comments_online"]
+        i["activation_prob"] = mapping[i["comments_online"]]
+        try:
+            last_initiation = activated_agents[i["user_id"]][-1]
+            # print(activated_agents[i["user_id"]][::-1])
+            for j in activated_agents[i["user_id"]][::-1]:
+                # print("Diff:", last_initiation - j)
+                if last_initiation - j <= timedelta(seconds=initiation_ie_time):
+                    last_initiation = j
+                else:
+                    break
+            i["last_initiation"] = last_initiation
+        except:
+            i["last_initiation"] = datetime(1970, 1, 1, 0, 0, 0)
+
+        activation_threshold = random.random()
+        if i["user_id"] not in activated_agents:
+            activation_prob = i["activation_prob"] 
+            i["activated"] = (
+                True if activation_threshold < activation_prob else False
+            )
+        
+        else:
+            # Estimated mu: 8.465372775046776
+            # Estimated sigma: 2.7585282466115832
+            x = (current_time - i["last_initiation"]).total_seconds()
+            recurring_activation_prob = round(
+                scipy.stats.lognorm.sf(x, s=sigma, scale=np.exp(mu)),
+                3
+            ) * recurring_activation_prob_modifier
+            activation_prob = i["activation_prob"] + recurring_activation_prob
+            # print(i["activation_prob"], x, recurring_activation_prob, activation_prob)
+            i["activated"] = (
+                True if activation_threshold < activation_prob else False
+            )
+        
+        if i["activated"] == True:
+            activated_agents_step.append(i["user_id"])
+
+    if print_info:
+        print("#" * 20)      
+        print("Activation function activated:", len(activated_agents_step), "users.")
+        print("#" * 20)
+    return activated_agents_step
