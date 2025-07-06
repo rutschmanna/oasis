@@ -99,8 +99,12 @@ models/
 *.sqlite
 dbs/
 db_json/
+test_dbs/
 
 # Secrets
 *_secret.txt
+
+# Scripts
+scripts/
 
 tmp

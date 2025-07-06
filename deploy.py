@@ -22,8 +22,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model-path", help="str model type or path")
 parser.add_argument("--model-name", help="str model name")
 parser.add_argument("--gpu-memory-utilization", help="float allowed gpu utilization", type=float, default=0.8)
-parser.add_argument("--max-model-len", help="int max model contect length", type=int, default=20000)
-parser.add_argument("--tool-call-parser", help="str tool-call-parser", default="llama3_json")
+parser.add_argument("--max-model-len", help="int max model contect length", type=int, default=131072)
+parser.add_argument("--tool-call-parser", help="str tool-call-parser", default="hermes")
 parser.add_argument("--open-args", help="additional vllm args", default="")
 args = parser.parse_args()
 
@@ -70,7 +70,6 @@ if __name__ == "__main__":
                 f"vllm.entrypoints.openai.api_server --model "
                 f"'{args.model_path}' "
                 f"--served-model-name '{args.model_name}' "
-                #f"--max-model-len {args.max_model_len} "
                 #f"--load-format bitsandbytes --quantization bitsandbytes "
                 f"--host {host} --port {ports[j][i]} --gpu-memory-utilization "
                 f"{args.gpu_memory_utilization} --disable-log-stats "
@@ -78,7 +77,6 @@ if __name__ == "__main__":
                 f"--rope-scaling '{rope_scaling}' "
                 f"--max-model-len {args.max_model_len} "
                 f"{args.open_args} "
-                #f"--disable-mm-preprocessor-cache --max-num-seqs=256 "
                 )
             t = threading.Thread(target=subprocess.run,
                                  args=(cmd, ),
