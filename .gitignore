@@ -105,6 +105,9 @@ test_dbs/
 *_secret.txt
 
 # Scripts
-scripts/
+scripts/demos/
+scripts/figures/
+scripts/depr/
+scripts/*.json
 
 tmp
