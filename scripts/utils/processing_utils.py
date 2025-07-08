@@ -11,6 +11,28 @@ import time
 from tqdm import tqdm
 import utils.simulation_utils as su
 
+seed_posts = {
+        1: "The US should condemn Israel’s military actions in Gaza as acts of genocide and impose full sanctions.",
+        2: "Prostitution should be illegal.",
+        3: "Things like gender-neutral language and stating pronouns are silly issues.",
+        4: "The death penalty should be reestablished US-wide.",
+        5: "The US should provide financial and military aid to Ukraine.",
+        6: "We need stricter gun control laws.",
+        7: "Social media is a threat to democracy.",
+        8: "Immigration should be regulated more strictly.",
+        9: "Fur clothing should be banned.",
+        10: "Police officers should wear body cameras.",
+        11: "Climate change is one of the greatest threats to humanity.",
+        12: "Employers should mandate vaccination.",
+        13: "The government should not be responsible for providing universal health care.",
+        14: "The government should not forgive student loan debt.",
+        15: "Artificial intelligence should replace humans where possible.",
+        16: "There should only be vegetarian food in cantines.",
+        17: "A universal basic income would kill the economy.",
+        18: "The federal minimum wage should be increased.",
+        19: "The government should not invest in renewable energy.",
+        20: "Airbnb should be banned in cities."
+    }
 
 def convert_db_contents(db_file,
                         base_path="/../abyss/home/oasis/oasis-rutschmanna/data"):
@@ -120,7 +142,9 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
                         if i["user_id"] == j["user_id"]:
                             i["seed_user_id"] = j["user_name"]
                     i["persona_file"] = re.findall(r"pf\d+", simulation_name)[0]
-                    i["seed_post"] = re.findall(r"sp\d+", seed_post_name)[0]
+                    seed_post_n = int(re.findall(r"\d+", seed_post_name)[0])
+                    i["seed_post"] = f"sp{seed_post_n}"
+                    i["seed_post_content"] = seed_posts[seed_post_n]
 
 
                 if to_df:
@@ -232,33 +256,33 @@ def structure_analysis_df(data, root_id="parent_comment_id"):
     
     # Interaction Volume
     volume = data.groupby(
-        ["post_id", "persona_file"]
+        ["persona_file", "seed_post"]
     ).count().iloc[:,0].tolist()
     
     # Structural width analysis
     temp = data[data["parent_comment_id"] == -1]
-    width = temp.groupby(["post_id", "persona_file"]).count().iloc[:,0].tolist()
+    width = temp.groupby(["persona_file", "seed_post"]).count().iloc[:,0].tolist()
             
     # Structural depth analysis
     depth = []
-    for i, j in data.groupby(["post_id", "persona_file"]):
+    for i, j in data.groupby(["persona_file", "seed_post"]):
         temp = recursive_depth_df(j)
         depth.append(temp)
 
     # Scale
     scale = data.groupby(
-        ["post_id", "persona_file"]
+        ["persona_file", "seed_post"]
     )["user_id"].unique().apply(len).tolist()
 
     # Active share
     n = [i[0].item() for i in data.groupby(
-        ["post_id", "persona_file"]
+        ["persona_file", "seed_post"]
     )["n_agents"].unique()]
     active = [round(i / j, 3) for i,j in zip(scale, n)]
 
     # Comment Lengths
     comment_lengths = data.groupby(
-        ["post_id", "persona_file"]
+        ["persona_file", "seed_post"]
     )["content"].apply(lambda x: [len(i) for i in x]).tolist()
                 
 

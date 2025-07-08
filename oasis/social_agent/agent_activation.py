@@ -1,3 +1,4 @@
+# custom
 import sqlite3
 import pandas as pd
 import random
@@ -16,7 +17,7 @@ def activation_function(
     distribution_type="lognorm",
     sigma=2.759,
     mu=8.465,
-    recurring_activation_prob_modifier=0.3
+    recurring_activation_prob_modifier=0.6
 ):
     """
     Determines the activation of LLM agents in the OASIS simulation.
@@ -32,13 +33,29 @@ def activation_function(
     current_time = env.sandbox_clock.time_transfer(
                 datetime.now(), env.start_time)
     
+    # if mapping_type == "comments":
+    #     mapping = {
+    #         1: 0.005,  # never
+    #         2: 0.0075, # once per month
+    #         3: 0.03,   # once per week
+    #         4: 0.05,   # almost daily
+    #         5: 0.1,    # multiple times a day
+    #     }
+    # if mapping_type == "comments":
+    #     mapping = {
+    #         1: 0.0025,  # never
+    #         2: 0.00325, # once per month
+    #         3: 0.015,   # once per week
+    #         4: 0.025,   # almost daily
+    #         5: 0.05,    # multiple times a day
+    #     },
     if mapping_type == "comments":
         mapping = {
-            1: 0.005,  # never
-            2: 0.0075, # once per month
-            3: 0.03,   # once per week
-            4: 0.05,   # almost daily
-            5: 0.1,    # multiple times a day
+            1: 0.0005,  # never
+            2: 0.00075, # once per month
+            3: 0.003,   # once per week
+            4: 0.01,   # almost daily
+            5: 0.025,    # multiple times a day
         }
     elif mapping_type == "social_media": # very high!
         mapping = {
@@ -124,7 +141,8 @@ def activation_function(
             activated_agents_step.append(i["user_id"])
 
     if print_info:
-        print("#" * 20)      
+        print("#" * 80)      
         print("Activation function activated:", len(activated_agents_step), "users.")
-        print("#" * 20)
+        print("#" * 80)
     return activated_agents_step
+# custom
