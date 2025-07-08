@@ -5,6 +5,7 @@ import time
 import random
 import pandas as pd
 from datetime import datetime, timedelta
+from tqdm import tqdm
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -85,9 +86,9 @@ async def main():
             recsys_type="reddit",
             allow_self_rating=True,
             show_score=True,
-            max_rec_post_len=1000,
-            sandbox_clock=Clock(30),
-            start_time=datetime(2025, 6, 30, 12, 00, 00) + timedelta(hours=24*args.seed_post),
+            max_rec_post_len=10000,
+            sandbox_clock=Clock(15),
+            start_time=datetime(2025, 7, 1, 12, 00, 00) + timedelta(hours=24*(args.seed_post-1)),
         ),
         database_path=db_path,
         agent_profile_path=f"data/reddit/dp{args.persona_file}_personas.json",
@@ -143,7 +144,7 @@ async def main():
     # Perform the actions
     await env.step(env_action_1)
     
-    for _ in range(args.time_steps):
+    for _ in tqdm(range(args.time_steps)):
         env_action_empty = EnvAction(activate_agents=activation_function(sample_data.set_index("ParticipantID"),
                                                                          db_path,
                                                                          env.platform))

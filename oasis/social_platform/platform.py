@@ -1110,6 +1110,7 @@ class Platform:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    # custom
     async def create_comment_comment(self, agent_id: int, comment_message: tuple):
         post_id, parent_comment_id, content = comment_message
         if self.recsys_type == RecsysType.REDDIT:
@@ -1122,6 +1123,17 @@ class Platform:
             if post_type_result['type'] == 'repost':
                 post_id = post_type_result['root_post_id']
             user_id = agent_id
+
+            # Check if comment_parent_id exists
+            parent_comment_id_check_query = (
+                "SELECT comment_id FROM comment WHERE comment_id = ?"
+            )
+            parent_comment_id_check = self.pl_utils._execute_db_command(
+                parent_comment_id_check_query,
+                parent_comment_id,
+            ).fetchone()
+            if parent_comment_id_check is None:
+                raise ValueError(f"No comment with comment_id: {parent_comment_id}")
 
             # Insert the comment record
             comment_insert_query = (
@@ -1143,6 +1155,7 @@ class Platform:
             return {"success": True, "comment_id": comment_id}
         except Exception as e:
             return {"success": False, "error": str(e)}
+    # custom
 
     async def like_comment(self, agent_id: int, comment_id: int):
         if self.recsys_type == RecsysType.REDDIT:
