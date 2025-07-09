@@ -111,11 +111,15 @@ class SocialAgent(ChatAgent):
         env_prompt = await self.env.to_text_prompt()
         user_msg = BaseMessage.make_user_message(
             role_name="User",
+            # custom
             content=(
                 f"Please perform a social media typical action after observing the "
                 f"platform environment. Take advantage of the full scope of "
                 f"actions and do not limit yourself to any single one of them. "
-                f"This is your social media environment: {env_prompt}"))
+                f"This is your social media environment: {env_prompt}"
+            )
+            # custom
+        )
                 
                # f"Please perform social media actions after observing the "
                # f"platform environments. Notice that don't limit your "

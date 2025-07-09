@@ -35,12 +35,14 @@ class SocialEnvironment(Environment):
     posts_env_template = Template(
          "After refreshing, you see this social media thread: $posts")
     env_template = Template(
+        # custom
         "$posts_env\nPick and perform the action that best fits the situation "
         "based on the information provided in your profile and the content of "
         "the discussion. Take full advantage of the broad set of available "
         "actions and do not limit yourself to any single one of them.\n"
         "It is vital for you to also comment on the comments of other network"
         "users and generate a believable conversation structure (width & breadth)."
+        # custom
         )
         
         #"$posts_env\npick one you want to perform action that best "

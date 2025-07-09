@@ -41,7 +41,9 @@ class SocialAction:
                 self.refresh,
                 self.do_nothing,
                 self.create_comment,
+                # custom
                 self.create_comment_comment,
+                # custom
                 self.like_comment,
                 self.dislike_comment,
                 self.unlike_comment,
@@ -526,6 +528,7 @@ class SocialAction:
         return await self.perform_action(comment_message,
                                          ActionType.CREATE_COMMENT.value)
 
+    # custom
     async def create_comment_comment(self, post_id: int, parent_comment_id: int, content: str):
         r"""Create a child-comment for a specified parent-comment.
 
@@ -552,6 +555,7 @@ class SocialAction:
         comment_message = (post_id, parent_comment_id, content)
         return await self.perform_action(comment_message,
                                          ActionType.CREATE_COMMENT_COMMENT.value)
+    # custom
 
     async def like_comment(self, comment_id: int):
         r"""Create a new like for a specified comment.
