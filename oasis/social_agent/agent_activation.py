@@ -10,14 +10,14 @@ def activation_function(
     data,
     db_path,
     env,
-    mapping_type="comments",
+    mapping_type,
     print_info=True,
-    initiation_ie_time=3600,
-    inter_burst_time=3600*3,
+    initiation_ie_time=90,
+    inter_burst_time=90*3,
     distribution_type="lognorm",
     sigma=2.759,
     mu=8.465,
-    recurring_activation_prob_modifier=0.6
+    recurring_activation_prob_modifier=0.6,
 ):
     """
     Determines the activation of LLM agents in the OASIS simulation.
@@ -33,23 +33,25 @@ def activation_function(
     current_time = env.sandbox_clock.time_transfer(
                 datetime.now(), env.start_time)
     
-    # if mapping_type == "comments":
-    #     mapping = {
-    #         1: 0.005,  # never
-    #         2: 0.0075, # once per month
-    #         3: 0.03,   # once per week
-    #         4: 0.05,   # almost daily
-    #         5: 0.1,    # multiple times a day
-    #     }
-    # if mapping_type == "comments":
-    #     mapping = {
-    #         1: 0.0025,  # never
-    #         2: 0.00325, # once per month
-    #         3: 0.015,   # once per week
-    #         4: 0.025,   # almost daily
-    #         5: 0.05,    # multiple times a day
-    #     },
     if mapping_type == "comments":
+        mapping = {
+            1: 0.005,  # never
+            2: 0.0075, # once per month
+            3: 0.03,   # once per week
+            4: 0.05,   # almost daily
+            5: 0.1,    # multiple times a day
+        }
+        
+    elif mapping_type == "rare_comments":
+        mapping = {
+            1: 0.0025,  # never
+            2: 0.00325, # once per month
+            3: 0.015,   # once per week
+            4: 0.025,   # almost daily
+            5: 0.05,    # multiple times a day
+        }
+        
+    elif mapping_type == "very_rare_comments":
         mapping = {
             1: 0.0005,  # never
             2: 0.00075, # once per month
@@ -57,6 +59,7 @@ def activation_function(
             4: 0.01,   # almost daily
             5: 0.025,    # multiple times a day
         }
+        
     elif mapping_type == "social_media": # very high!
         mapping = {
             1: 0.01, # not at all
@@ -108,7 +111,7 @@ def activation_function(
             # print(activated_agents[i["user_id"]][::-1])
             for j in activated_agents[i["user_id"]][::-1]:
                 # print("Diff:", last_initiation - j)
-                if last_initiation - j <= timedelta(seconds=initiation_ie_time):
+                if last_initiation - j <= timedelta(minutes=initiation_ie_time):
                     last_initiation = j
                 else:
                     break
@@ -117,7 +120,7 @@ def activation_function(
             i["last_initiation"] = datetime(1970, 1, 1, 0, 0, 0)
 
         activation_threshold = random.random()
-        if i["user_id"] not in activated_agents:
+        if i["user_id"] not in activated_agents.keys() and current_time - i["last_initiation"] <= timedelta(minutes=inter_burst_time):
             activation_prob = i["activation_prob"] 
             i["activated"] = (
                 True if activation_threshold < activation_prob else False
@@ -127,9 +130,8 @@ def activation_function(
             # Estimated mu: 8.465372775046776
             # Estimated sigma: 2.7585282466115832
             x = (current_time - i["last_initiation"]).total_seconds()
-            recurring_activation_prob = round(
-                scipy.stats.lognorm.sf(x, s=sigma, scale=np.exp(mu)),
-                3
+            recurring_activation_prob = scipy.stats.lognorm.sf(
+                x, s=sigma, scale=np.exp(mu)
             ) * recurring_activation_prob_modifier
             activation_prob = i["activation_prob"] + recurring_activation_prob
             # print(i["activation_prob"], x, recurring_activation_prob, activation_prob)

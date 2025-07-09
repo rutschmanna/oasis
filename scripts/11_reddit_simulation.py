@@ -37,7 +37,7 @@ if "sphinx" not in sys.modules:
     script_log = logging.getLogger(name="11_reddit_sim")
     script_log.setLevel("DEBUG")
     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    file_handler = logging.FileHandler(f"./log/11_reddit_sim-{args.persona_file}.log")
+    file_handler = logging.FileHandler(f"./log/11_reddit_sim-{datetime.now().strftime("%m-%d")}.log")
     file_handler.setLevel("DEBUG")
     file_handler.setFormatter(
         logging.Formatter(
@@ -174,7 +174,9 @@ async def main():
         activated_agents = activation_function(
             sample_data.set_index("ParticipantID"),
             db_path,
-            env.platform
+            env.platform,
+            mapping_type="rare_comments",
+            recurring_activation_prob_modifier=0.5,
         )
 
         if len(activated_agents) > 0:
@@ -185,8 +187,8 @@ async def main():
             await env.step(env_action_empty)
         else:
             sleep = random.randint(
-                int((time_factor*0.8)*60/args.clock_factor),
-                int((time_factor*1.2)*60/args.clock_factor)
+                int((time_factor*0.8)*60),
+                int(time_factor*60)
             )
             script_log.info(f"No agents activated - Sleep for {sleep}s")
             time.sleep(sleep)
