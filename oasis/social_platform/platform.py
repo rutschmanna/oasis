@@ -1112,13 +1112,13 @@ class Platform:
 
             # Check if comment_parent_id exists
             parent_comment_id_check_query = (
-                "SELECT comment_id FROM comment WHERE comment_id = ?"
+                "SELECT comment_id FROM comment WHERE comment_id = (?)"
             )
-            parent_comment_id_check = self.pl_utils._execute_db_command(
+            self.pl_utils._execute_db_command(
                 parent_comment_id_check_query,
-                parent_comment_id,
-            ).fetchone()
-            if parent_comment_id_check is None:
+                (parent_comment_id, ), # sqlite syntax requirement
+            )
+            if self.db_cursor.fetchone() is None:
                 raise ValueError(f"No comment with comment_id: {parent_comment_id}")
 
             # Insert the comment record

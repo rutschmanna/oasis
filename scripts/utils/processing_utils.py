@@ -143,7 +143,7 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
                             i["seed_user_id"] = j["user_name"]
                     i["persona_file"] = re.findall(r"pf\d+", simulation_name)[0]
                     seed_post_n = int(re.findall(r"\d+", seed_post_name)[0])
-                    i["seed_post"] = f"sp{seed_post_n}"
+                    i["seed_post"] = seed_post_n
                     i["seed_post_content"] = seed_posts[seed_post_n]
 
 
