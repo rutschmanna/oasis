@@ -162,6 +162,7 @@ class PlatformUtils:
                                    f" {num_reports} times]")
                 post_content = f"{warning_message}\n{post_content}"
 
+            # custom
             def build_comment_thread(comments, parent_id=-1):
                 """
                 Recursively builds the reddit specific thread structure of posts,
@@ -179,6 +180,7 @@ class PlatformUtils:
                 
             if recsys_type == RecsysType.REDDIT:
                 comments = build_comment_thread(comments)
+            # custom
 
             # Add post information and corresponding comments to the posts list
             posts.append({
@@ -204,7 +206,7 @@ class PlatformUtils:
                 "comments":
                 comments,
             })
-        return posts[-1] # [-1] This enforces a single thread environment
+        return posts
 
     def _record_trace(self,
                       user_id,
