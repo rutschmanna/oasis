@@ -37,7 +37,7 @@ if "sphinx" not in sys.modules:
     script_log = logging.getLogger(name="11_reddit_sim")
     script_log.setLevel("DEBUG")
     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    file_handler = logging.FileHandler(f"./log/11_reddit_sim-{datetime.now().strftime("%m-%d")}.log")
+    file_handler = logging.FileHandler(f"./log/11_reddit_sim-{datetime.now().strftime('%m-%d')}.log")
     file_handler.setLevel("DEBUG")
     file_handler.setFormatter(
         logging.Formatter(
@@ -175,7 +175,7 @@ async def main():
             sample_data.set_index("ParticipantID"),
             db_path,
             env.platform,
-            mapping_type="rare_comments",
+            mapping_type="comments",
             recurring_activation_prob_modifier=0.5,
         )
 
