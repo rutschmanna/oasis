@@ -180,12 +180,12 @@ class Platform:
             current_time = self.sandbox_clock.get_time_step()
         try:
             user_insert_query = (
-                "INSERT INTO user (user_id, agent_id, user_name, name, bio, "
+                "INSERT INTO user (user_id, agent_id, user_name, name, bio, " # custom
                 "created_at, num_followings, num_followers) VALUES "
-                "(?, ?, ?, ?, ?, ?, ?, ?)")
+                "(?, ?, ?, ?, ?, ?, ?, ?)") # custom
             self.pl_utils._execute_db_command(
                 user_insert_query,
-                (agent_id, agent_id, user_name, name, bio, current_time, 0, 0),
+                (agent_id, agent_id, user_name, name, bio, current_time, 0, 0), # custom
                 commit=True,
             )
             user_id = agent_id

@@ -128,8 +128,8 @@ class SocialAction:
         """
         return await self.perform_action(None, ActionType.REFRESH.value)
 
-    async def do_nothing(self):
-        """Perform no action.
+    async def do_nothing(self): # custom Perform no action
+        """Abstain from performing any action and participating in the conversation.
         Returns:
             dict: A dictionary with 'success' indicating if the removal was
                 successful.

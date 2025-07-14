@@ -36,36 +36,37 @@ from .typing import ActionType, RecsysType
 rec_log = logging.getLogger(name='social.rec')
 rec_log.setLevel('DEBUG')
 
-# Initially set to None, to be assigned once again in the recsys function
-model = None
-twhin_tokenizer, twhin_model = None, None
+# custom
+# # Initially set to None, to be assigned once again in the recsys function
+# model = None
+# twhin_tokenizer, twhin_model = None, None
 
-# Create the TF-IDF model
-tfidf_vectorizer = TfidfVectorizer()
-# Prepare the twhin model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# # Create the TF-IDF model
+# tfidf_vectorizer = TfidfVectorizer()
+# # Prepare the twhin model
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-twhin_tokenizer = AutoTokenizer.from_pretrained(
-    pretrained_model_name_or_path="Twitter/twhin-bert-base",
-    model_max_length=512)  # TODO change the pretrained_model_path
-twhin_model = AutoModel.from_pretrained(
-    pretrained_model_name_or_path="Twitter/twhin-bert-base").to(device)
+# twhin_tokenizer = AutoTokenizer.from_pretrained(
+#     pretrained_model_name_or_path="Twitter/twhin-bert-base",
+#     model_max_length=512)  # TODO change the pretrained_model_path
+# twhin_model = AutoModel.from_pretrained(
+#     pretrained_model_name_or_path="Twitter/twhin-bert-base").to(device)
 
-# All historical tweets and the most recent tweet of each user
-user_previous_post_all = {}
-user_previous_post = {}
-user_profiles = []
-# Get the {post_id: content} dict
-t_items = {}
-# Get the {uid: follower_count} dict
-# It's necessary to ensure that agent registration is sequential, with the
-# relationship of user_id=agent_id+1; disorder in registration will cause
-# issues here
-u_items = {}
-# Get the creation times of all tweets, assigning scores based on how recent
-# they are
-date_score = []
-
+# # All historical tweets and the most recent tweet of each user
+# user_previous_post_all = {}
+# user_previous_post = {}
+# user_profiles = []
+# # Get the {post_id: content} dict
+# t_items = {}
+# # Get the {uid: follower_count} dict
+# # It's necessary to ensure that agent registration is sequential, with the
+# # relationship of user_id=agent_id+1; disorder in registration will cause
+# # issues here
+# u_items = {}
+# # Get the creation times of all tweets, assigning scores based on how recent
+# # they are
+# date_score = []
+# custom
 
 def load_model(model_name):
     try:
@@ -100,14 +101,14 @@ def get_recsys_model(recsys_type: str = None):
     else:
         raise ValueError(f"Unknown recsys type: {recsys_type}")
 
-
-# Move model to GPU if available
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-if model is not None:
-    model.to(device)
-else:
-    pass
-
+# custom
+# # Move model to GPU if available
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# if model is not None:
+#     model.to(device)
+# else:
+#     pass
+# custom
 
 # Reset global variables
 def reset_globals():

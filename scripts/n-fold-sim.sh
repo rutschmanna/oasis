@@ -3,22 +3,22 @@
 # echo $1
 # echo $2
 
-# for i in $(seq 1 6);
-# do
-#     for j in $(seq 1 20);
-#     do
-#     	python scripts/10_reddit_simulation.py --model-name qwen --time-steps $1 --persona-file "$i" --seed-post $j
-    
-#     done
-# done
-
 echo $1
 
 for i in $(seq 1 20);
 do
-    python scripts/10_reddit_simulation.py --model-name qwen --time-steps $1 --persona-file "1" --seed-post $i
+    python scripts/11_reddit_simulation.py --model-name qwen --time-steps $1 --subreddit 2 --topic $i --clock-factor 60 --burst-modifier 3
 
 done
+
+# for i in $(seq 3 6);
+# do
+#     for j in $(seq 1 20);
+#     do
+#     	python scripts/11_reddit_simulation.py --model-name qwen --time-steps $1 --subreddit "$i" --seed-post $j --clock-factor 60
+    
+#     done
+# done
 
 # echo $1
 

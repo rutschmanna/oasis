@@ -113,10 +113,9 @@ class SocialAgent(ChatAgent):
             role_name="User",
             # custom
             content=(
-                f"Please perform a social media typical action after observing the "
-                f"platform environment. Take advantage of the full scope of "
-                f"actions and do not limit yourself to any single one of them. "
-                f"This is your social media environment: {env_prompt}"
+                "Perform one of the given social media actions after observing the "
+                f"Reddit thread. Your personal user_id is {self.social_agent_id}.\n"
+                f"{env_prompt}"
             )
             # custom
         )

@@ -4,6 +4,7 @@ CREATE TABLE comment (
     post_id INTEGER,
     parent_comment_id INTEGER Default -1,
     user_id INTEGER,
+    subreddit INTEGER,
     content TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     num_likes INTEGER DEFAULT 0,

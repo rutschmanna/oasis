@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import logging
 import sys
+import powerlaw
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -22,10 +23,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model-name", help="str model name")
 parser.add_argument("--ip", help="ip of vllm server", default="127.0.0.1")
 parser.add_argument("--port", help="port of vllm entry", default="8002")
-parser.add_argument("--time-steps", help="# of simulation steps",  type=int,  default="3")
-parser.add_argument("--persona-file", help="file containing personas", type=str, default="1")
-parser.add_argument("--seed-post", help="int key for respective seed post", type=int, default=1)
+parser.add_argument("--time-steps", help="# of simulation steps",  type=int,  default=3)
+parser.add_argument("--subreddit", help="file containing personas", type=int, default=1)
+parser.add_argument("--topic", help="int key for respective seed post", type=int, default=1)
 parser.add_argument("--clock-factor", help="int value for sandbox time modificator", type=int, default=60)
+parser.add_argument("--burst-modifier", help="int value for inter-event burst modifier", type=int, default=4)
 args = parser.parse_args()
 
 
@@ -77,7 +79,7 @@ async def main():
 
     time_factor = 60/args.clock_factor
     time_steps = int(args.time_steps*time_factor)
-    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/reddit-sim_{args.model_name}_pf{args.persona_file}-{args.time_steps}h/" # _{time.strftime('%H-%M', time.localtime())}
+    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/reddit-sim_{args.model_name}_subreddit-{args.subreddit}-{args.time_steps}h/" # _{time.strftime('%H-%M', time.localtime())}
 
     script_log.info(f"Time factor: {time_factor}")
     script_log.info(f"Time steps: {args.time_steps}")
@@ -88,10 +90,19 @@ async def main():
         print("Created:", db_dir_path)
 
     # Define the path to the database
-    db_path = f"{db_dir_path}sp{args.seed_post}.db"
+    db_path = f"{db_dir_path}topic_{args.topic}.db"
 
-    # Load Oswald et al. sample data
+    # Load Oswald et al. sample data and fit powerlaw
     sample_data = pd.read_csv("/../abyss/home/oasis/oswald-et-al_2025/sample_anon.csv")
+    interevent_data_seed = pd.read_csv(
+        "/../abyss/home/oasis/data/intraevent.csv"
+    )["interevent_diff"]
+    fit = powerlaw.Fit(
+        xmin=interevent_data_seed.min(), 
+        xmax=interevent_data_seed.max(), 
+        data=interevent_data_seed
+    )
+    distribution_fit = fit.lognormal
 
     # env = oasis.make(
     #     platform=oasis.DefaultPlatformType.REDDIT
@@ -110,16 +121,16 @@ async def main():
             show_score=True,
             max_rec_post_len=10000,
             sandbox_clock=Clock(args.clock_factor),
-            start_time=datetime(2025, 7, 1, 12, 00, 00) + timedelta(hours=24*(args.seed_post-1)),
+            start_time=datetime(2025, 7, 1, 12, 00, 00) + timedelta(hours=24*(args.topic-1)),
         ),
         database_path=db_path,
-        agent_profile_path=f"data/reddit/dp{args.persona_file}_personas.json",
+        agent_profile_path=f"data/reddit/seed_personas_subreddit_{args.subreddit}.json",
         agent_models=llm_model,
         available_actions=available_actions,
         semaphore=16,
     )
 
-    seed_posts = {
+    topics = {
         1: "The US should condemn Israel’s military actions in Gaza as acts of genocide and impose full sanctions.",
         2: "Prostitution should be illegal.",
         3: "Things like gender-neutral language and stating pronouns are silly issues.",
@@ -150,7 +161,7 @@ async def main():
             action=ActionType.CREATE_POST,
             args={
                 "content": (
-                    f"{seed_posts[args.seed_post]}\n"
+                    f"{topics[args.topic]}\n"
                     "Please discuss! This statement serves as starting point for today’s discussion."
                     # "It neither reflects the opinion of the researchers nor a political "
                     # "position of the research institution."
@@ -175,8 +186,9 @@ async def main():
             sample_data.set_index("ParticipantID"),
             db_path,
             env.platform,
-            mapping_type="comments",
-            recurring_activation_prob_modifier=0.5,
+            mapping_type="rare_comments",
+            distribution_fit=distribution_fit,
+            recurring_activation_prob_modifier=args.burst_modifier,
         )
 
         if len(activated_agents) > 0:

@@ -397,7 +397,7 @@ async def gen_control_agents_with_data(
                 "other_info": {
                     "user_profile": "None",
                     "gender": "None",
-                    #"mbti": "None",
+                    #"mbti": "None", # custom
                     "country": "None",
                     "age": "None",
                 }
@@ -479,7 +479,7 @@ async def generate_reddit_agents(
         agent_graph.add_agent(agent)
 
         # Sign up agent and add their information to the database
-        print(f"Signing up Reddit-agent {agent_info[i]['username']}...")
+        print(f"Signing up Reddit-agent {agent_info[i]['username']}")
         response = await agent.env.action.sign_up(agent_info[i]["username"],
                                                   agent_info[i]["realname"],
                                                   agent_info[i]["bio"])

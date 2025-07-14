@@ -33,18 +33,32 @@ class SocialEnvironment(Environment):
     follows_env_template = Template("I have $num_follows follows.")
 
     posts_env_template = Template(
-         "After refreshing, you see this social media thread: $posts")
+         "After refreshing, you see this Reddit thread: $posts")
     env_template = Template(
         # custom
-        "$posts_env\nPick and perform the action that best fits the situation "
-        "based on the information provided in your profile and the content of "
-        "the discussion. Take full advantage of the broad set of available "
-        "actions and do not limit yourself to any single one of them.\n"
-        "It is vital for you to also comment on the comments of other network"
-        "users and generate a believable conversation structure (width & breadth)."
+        "$posts_env\n"
+        # "Pick and perform one of the available social media actions "
+        # "that aligns best with your profile, self description, and persona. "
+        # "Take advantage of the full scope of available actions."
         # custom
         )
-        
+
+        # custom
+        # "$posts_env\nPick and perform the action that best fits the situation "
+        # "based on the information provided in your profile and the content of "
+        # "the discussion. Take full advantage of the broad set of available "
+        # "actions and do not limit yourself to any single one of them. Please "
+        # "note that 'doing nothing' is also considered an action in this context.\n"
+        # "Reflect on the content and topic of the conversation and decide if it "
+        # "would be in line with your personality to partake. If you decide not to act "
+        # "choose the action 'do_nothing'. Otherwise perform one of the other actions."
+        # "Should you choose to interact keep in mind that it is vital for you to "
+        # "generate a believable conversation structure (width & breadth) by replying "
+        # "and commenting to/on other users contributions. If what you would like to "
+        # "contribute has already been mentioned by another user please refrain from "
+        # "repeating it and try to expand or reply on what has already been posted."
+        # custom
+
         #"$posts_env\npick one you want to perform action that best "
         #"reflects your current inclination based on your profile and "
         #"posts content. Do not limit your action in just `like` to like posts")
