@@ -125,7 +125,7 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
             print("Reading: ", simulation_name)
 
             df_content = pd.DataFrame()
-            json_content = {}
+            json_content = []
             
             seed_post_directory = f"{db_json_path}{simulation_name}/"
             for seed_post_dir in os.listdir(seed_post_directory):
@@ -141,7 +141,7 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
                     for j in users:
                         if i["user_id"] == j["user_id"]:
                             i["seed_user_id"] = j["user_name"]
-                    i["persona_file"] = re.findall(r"pf\d+", simulation_name)[0]
+                    i["subreddit"] = int(re.findall(r"(?<=subreddit-)\d+", simulation_name)[0])
                     seed_post_n = int(re.findall(r"\d+", seed_post_name)[0])
                     i["seed_post"] = seed_post_n
                     i["seed_post_content"] = seed_posts[seed_post_n]
@@ -150,7 +150,8 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
                 if to_df:
                     df_content = pd.concat([df_content, pd.DataFrame(content)])
                 else:
-                    json_content = json_content.update(content)
+                    # return content
+                    json_content.extend(content)
                 
             if to_df:
                 data[simulation_name] = df_content.sort_values(
@@ -186,8 +187,8 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
 #                 for j in users:
 #                     if i["user_id"] == j["user_id"]:
 #                         i["seed_user_id"] = j["user_name"]
-#                 # i["persona_file"] = re.findall(r"(?<=pf)\d+", name)[0]
-#                 i["persona_file"] = re.findall(r"pf\d+", name)[0]
+#                 # i["subreddit"] = re.findall(r"(?<=pf)\d+", name)[0]
+#                 i["subreddit"] = re.findall(r"pf\d+", name)[0]
 
 #             if n_topics > 1 and multi_sim == True:
 #                 multi_sim_content = {}
@@ -256,33 +257,33 @@ def structure_analysis_df(data, root_id="parent_comment_id"):
     
     # Interaction Volume
     volume = data.groupby(
-        ["persona_file", "seed_post"]
+        ["subreddit", "seed_post"]
     ).count().iloc[:,0].tolist()
     
     # Structural width analysis
     temp = data[data["parent_comment_id"] == -1]
-    width = temp.groupby(["persona_file", "seed_post"]).count().iloc[:,0].tolist()
+    width = temp.groupby(["subreddit", "seed_post"]).count().iloc[:,0].tolist()
             
     # Structural depth analysis
     depth = []
-    for i, j in data.groupby(["persona_file", "seed_post"]):
+    for i, j in data.groupby(["subreddit", "seed_post"]):
         temp = recursive_depth_df(j)
         depth.append(temp)
 
     # Scale
     scale = data.groupby(
-        ["persona_file", "seed_post"]
+        ["subreddit", "seed_post"]
     )["user_id"].unique().apply(len).tolist()
 
     # Active share
     n = [i[0].item() for i in data.groupby(
-        ["persona_file", "seed_post"]
+        ["subreddit", "seed_post"]
     )["n_agents"].unique()]
     active = [round(i / j, 3) for i,j in zip(scale, n)]
 
     # Comment Lengths
     comment_lengths = data.groupby(
-        ["persona_file", "seed_post"]
+        ["subreddit", "seed_post"]
     )["content"].apply(lambda x: [len(i) for i in x]).tolist()
                 
 
@@ -329,7 +330,7 @@ def fisher(data):
     
     return mean_stat, p_value_fisher
 
-def query_perspective(data, api_key):
+def query_perspective_json(data, api_key):
     client = discovery.build(
       "commentanalyzer",
       "v1alpha1",
@@ -349,3 +350,28 @@ def query_perspective(data, api_key):
         time.sleep(1) # quota limit of 60 reqs per min
 
     return data
+
+def query_perspective_df(data, content_col, api_key):
+    data = data.copy()
+    client = discovery.build(
+      "commentanalyzer",
+      "v1alpha1",
+      developerKey=api_key,
+      discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
+      static_discovery=False,
+    )
+
+    perspective_results = []
+    for i in tqdm(data[content_col]):
+        req = {
+            "comment": {"text": i},
+            "requestedAttributes": {"TOXICITY": {}}
+        }
+        
+        resp = client.comments().analyze(body=req).execute()
+        perspective_results.append(resp["attributeScores"]["TOXICITY"]["summaryScore"]["value"])
+        time.sleep(1) # quota limit of 60 reqs per min
+
+    data[f"{content_col}_toxicity"] = perspective_results
+
+    return data    

@@ -189,7 +189,7 @@ class Platform:
                 "(?, ?, ?, ?, ?, ?, ?, ?)")
             self.pl_utils._execute_db_command(
                 user_insert_query,
-                (agent_id, agent_id, user_name, name, bio, current_time, 0, 0),
+                (agent_id, agent_id, user_name, name, bio, current_time, 0, 0), # custom
                 commit=True,
             )
             user_id = agent_id

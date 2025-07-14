@@ -40,10 +40,10 @@ model = None
 twhin_tokenizer = None
 twhin_model = None
 
-# Create the TF-IDF model
-tfidf_vectorizer = TfidfVectorizer()
-# Prepare the twhin model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# # Create the TF-IDF model
+# tfidf_vectorizer = TfidfVectorizer()
+# # Prepare the twhin model
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # All historical tweets and the most recent tweet of each user
 user_previous_post_all = {}
@@ -60,6 +60,21 @@ u_items = {}
 # they are
 date_score = []
 
+# # All historical tweets and the most recent tweet of each user
+# user_previous_post_all = {}
+# user_previous_post = {}
+# user_profiles = []
+# # Get the {post_id: content} dict
+# t_items = {}
+# # Get the {uid: follower_count} dict
+# # It's necessary to ensure that agent registration is sequential, with the
+# # relationship of user_id=agent_id+1; disorder in registration will cause
+# # issues here
+# u_items = {}
+# # Get the creation times of all tweets, assigning scores based on how recent
+# # they are
+# date_score = []
+# custom
 
 def get_twhin_tokenizer():
     global twhin_tokenizer
@@ -111,14 +126,14 @@ def get_recsys_model(recsys_type: str = None):
     else:
         raise ValueError(f"Unknown recsys type: {recsys_type}")
 
-
-# Move model to GPU if available
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-if model is not None:
-    model.to(device)
-else:
-    pass
-
+# custom
+# # Move model to GPU if available
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# if model is not None:
+#     model.to(device)
+# else:
+#     pass
+# custom
 
 # Reset global variables
 def reset_globals():

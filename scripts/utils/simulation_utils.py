@@ -2,7 +2,7 @@ import sqlite3
 import pandas as pd
 import random
 
-def generate_personas(data):
+def generate_personas(data, subreddit):
     """
     Uses the items from Oswald et al's (2025) survey and a collection 
     of int to str mappings (dicts) to recreate a seed user's submitted
@@ -197,6 +197,7 @@ def generate_personas(data):
             persona["age"] = r["age"]
             persona["gender"] = gender_dict[r["gender"]]
             persona["bio"] = ""
+            # persona["subreddit"] = subreddit
             persona["persona"] = pre_survey_questionnaire
             persona["country"] = "US"
             seed_personas.append(persona)

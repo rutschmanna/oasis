@@ -11,12 +11,10 @@ def activation_function(
     db_path,
     env,
     mapping_type,
+    distribution_fit,
     print_info=True,
     initiation_ie_time=90,
     inter_burst_time=90*3,
-    distribution_type="lognorm",
-    sigma=2.759,
-    mu=8.465,
     recurring_activation_prob_modifier=0.6,
 ):
     """
@@ -29,7 +27,7 @@ def activation_function(
         indexed by ParticipantID (seed_id)
     db_path: path to OASIS simulation data base
     """
-
+    
     current_time = env.sandbox_clock.time_transfer(
                 datetime.now(), env.start_time)
     
@@ -47,9 +45,18 @@ def activation_function(
             1: 0.0025,  # never
             2: 0.00325, # once per month
             3: 0.015,   # once per week
-            4: 0.025,   # almost daily
-            5: 0.05,    # multiple times a day
+            4: 0.05,   # almost daily
+            5: 0.1,    # multiple times a day
         }
+
+    # elif mapping_type == "rare_comments":
+    #     mapping = {
+    #         1: 0.0025,  # never
+    #         2: 0.00325, # once per month
+    #         3: 0.015,   # once per week
+    #         4: 0.025,   # almost daily
+    #         5: 0.05,    # multiple times a day
+    #     }
         
     elif mapping_type == "very_rare_comments":
         mapping = {
@@ -129,12 +136,23 @@ def activation_function(
         else:
             # Estimated mu: 8.465372775046776
             # Estimated sigma: 2.7585282466115832
-            x = (current_time - i["last_initiation"]).total_seconds()
-            recurring_activation_prob = scipy.stats.lognorm.sf(
-                x, s=sigma, scale=np.exp(mu)
+            x_prelim = (current_time - i["last_initiation"]).total_seconds()
+            # recurring_activation_prob = scipy.stats.lognorm.sf(
+            #     x, s=sigma, scale=np.exp(mu)
+            # ) * recurring_activation_prob_modifier
+
+            if x_prelim < distribution_fit.xmin:
+                x = distribution_fit.xmin
+            elif x_prelim > distribution_fit.xmax:
+                x = distribution_fit.xmax
+            else:
+                x = x_prelim
+
+            recurring_activation_prob = distribution_fit.ccdf(
+                x
             ) * recurring_activation_prob_modifier
             activation_prob = i["activation_prob"] + recurring_activation_prob
-            # print(i["activation_prob"], x, recurring_activation_prob, activation_prob)
+            
             i["activated"] = (
                 True if activation_threshold < activation_prob else False
             )

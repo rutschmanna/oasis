@@ -107,7 +107,9 @@ test_dbs/
 # Scripts
 scripts/demos/
 scripts/figures/
-scripts/depr/
 scripts/*.json
+
+# Deprecated
+depr/
 
 tmp
