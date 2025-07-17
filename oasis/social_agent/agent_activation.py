@@ -45,18 +45,9 @@ def activation_function(
             1: 0.0025,  # never
             2: 0.00325, # once per month
             3: 0.015,   # once per week
-            4: 0.05,   # almost daily
-            5: 0.1,    # multiple times a day
+            4: 0.025,   # almost daily
+            5: 0.05,    # multiple times a day
         }
-
-    # elif mapping_type == "rare_comments":
-    #     mapping = {
-    #         1: 0.0025,  # never
-    #         2: 0.00325, # once per month
-    #         3: 0.015,   # once per week
-    #         4: 0.025,   # almost daily
-    #         5: 0.05,    # multiple times a day
-    #     }
         
     elif mapping_type == "very_rare_comments":
         mapping = {
@@ -151,6 +142,7 @@ def activation_function(
             recurring_activation_prob = distribution_fit.ccdf(
                 x
             ) * recurring_activation_prob_modifier
+            print(recurring_activation_prob)
             activation_prob = i["activation_prob"] + recurring_activation_prob
             
             i["activated"] = (
