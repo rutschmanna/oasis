@@ -28,7 +28,7 @@ parser.add_argument("--subreddit", help="file containing personas", type=int, de
 parser.add_argument("--topic", help="int key for respective seed post", type=int, default=1)
 parser.add_argument("--clock-factor", help="int value for sandbox time modificator", type=int, default=60)
 parser.add_argument("--base-activation-mapping", help="'comment', 'rare_comment', 'very_rare_comment'", type=str, default="comments")
-parser.add_argument("--burst-modifier", help="int value for inter-event burst modifier", type=int, default=4)
+parser.add_argument("--burst-modifier", help="int value for inter-event burst modifier", type=int, default=0)
 args = parser.parse_args()
 
 
