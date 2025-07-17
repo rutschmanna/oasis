@@ -118,19 +118,18 @@ def activation_function(
             i["last_initiation"] = datetime(1970, 1, 1, 0, 0, 0)
 
         activation_threshold = random.random()
-        if i["user_id"] not in activated_agents.keys() and current_time - i["last_initiation"] <= timedelta(minutes=inter_burst_time):
+        inter_event_difference = current_time - i["last_initiation"]
+        if i["user_id"] not in activated_agents.keys() and inter_event_difference <= timedelta(minutes=inter_burst_time):
             activation_prob = i["activation_prob"] 
             i["activated"] = (
                 True if activation_threshold < activation_prob else False
             )
+
+        elif i["user_id"] in activated_agents.keys() and inter_event_difference <= timedelta(hours=24) and inter_event_difference > timedelta(hours=12):
+            i["activated"] = False
         
         else:
-            # Estimated mu: 8.465372775046776
-            # Estimated sigma: 2.7585282466115832
             x_prelim = (current_time - i["last_initiation"]).total_seconds()
-            # recurring_activation_prob = scipy.stats.lognorm.sf(
-            #     x, s=sigma, scale=np.exp(mu)
-            # ) * recurring_activation_prob_modifier
 
             if x_prelim < distribution_fit.xmin:
                 x = distribution_fit.xmin
@@ -142,7 +141,7 @@ def activation_function(
             recurring_activation_prob = distribution_fit.ccdf(
                 x
             ) * recurring_activation_prob_modifier
-            print(recurring_activation_prob)
+            
             activation_prob = i["activation_prob"] + recurring_activation_prob
             
             i["activated"] = (
