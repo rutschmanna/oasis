@@ -116,6 +116,7 @@ def batch_convert_db_contents(
 def load_db_json_data(db_json_path, start_str="reddit-sim_",
                       to_df=False):
     data = {}
+    trace_data = {}
     
     directory = os.fsencode(db_json_path)   
     for subdir in os.listdir(directory):
@@ -126,6 +127,8 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
 
             df_content = pd.DataFrame()
             json_content = []
+            trace_df = pd.DataFrame()
+            trace_json = []
             
             seed_post_directory = f"{db_json_path}{simulation_name}/"
             for seed_post_dir in os.listdir(seed_post_directory):
@@ -136,6 +139,9 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
             
                 with open(f"{db_json_path}{simulation_name}/{seed_post_name}/user.json") as f:
                     users = json.load(f)
+
+                with open(f"{db_json_path}{simulation_name}/{seed_post_name}/trace.json") as f:
+                    trace = json.load(f)
     
                 for i in content:
                     for j in users:
@@ -149,18 +155,24 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
 
                 if to_df:
                     df_content = pd.concat([df_content, pd.DataFrame(content)])
+                    trace_df = pd.concat([trace_df, pd.DataFrame(trace)])
                 else:
                     # return content
                     json_content.extend(content)
+                    trace_json.extend(trace)
                 
             if to_df:
                 data[simulation_name] = df_content.sort_values(
                     ["seed_post", "created_at"]
                 ).reset_index(drop=True)
+                trace_data[simulation_name] = trace_df.sort_values(
+                    ["created_at"]
+                ).reset_index(drop=True)
             else:
                 data[simulation_name] = json_content
+                trace_data[simulation_name] = trace_json
 
-    return data
+    return data, trace_data
     
 # def load_db_json_data(db_json_path, start_str="reddit-sim_", 
 #                       multi_sim=False,
