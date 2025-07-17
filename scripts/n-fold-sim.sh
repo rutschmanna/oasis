@@ -5,9 +5,9 @@
 
 echo $1
 
-for i in $(seq 1 20);
+for i in $(seq 7 20);
 do
-    python scripts/11_reddit_simulation.py --model-name qwen --time-steps $1 --subreddit 2 --topic $i --clock-factor 60 --burst-modifier 3
+    python scripts/11_reddit_simulation.py --model-name qwen --time-steps $1 --subreddit 1 --topic $i --clock-factor 60
 
 done
 
