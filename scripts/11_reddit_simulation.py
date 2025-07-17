@@ -183,7 +183,7 @@ async def main():
     
     for _ in range(time_steps):
         script_log.info(f"Time step {_+1} initiated - {env.platform.sandbox_clock.time_transfer(datetime.now(), env.platform.start_time)}")
-        activated_agents = activation_function(
+        activated_agents, disconnected_agents = activation_function(
             sample_data.set_index("ParticipantID"),
             db_path,
             env.platform,
@@ -197,6 +197,7 @@ async def main():
                 activate_agents=activated_agents
             )
             script_log.info(f"{len(activated_agents)} agents activated")
+            script_log.info(f"{len(disconnected_agents)} agents activated: {disconnected_agents}")
             await env.step(env_action_empty)
         else:
             sleep = random.randint(

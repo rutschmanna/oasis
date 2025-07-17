@@ -91,6 +91,7 @@ def activation_function(
     conn.close()
 
     activated_agents = {}
+    disconnected_agents = []
 
     for i in previous_activations:
         timestamp_str = i["created_at"]
@@ -127,6 +128,7 @@ def activation_function(
 
         elif i["user_id"] in activated_agents.keys() and inter_event_difference <= timedelta(hours=24) and inter_event_difference > timedelta(hours=12):
             i["activated"] = False
+            disconnected_agents.append(i["user_id"])
         
         else:
             x_prelim = (current_time - i["last_initiation"]).total_seconds()
@@ -155,5 +157,5 @@ def activation_function(
         print("#" * 80)      
         print("Activation function activated:", len(activated_agents_step), "users.")
         print("#" * 80)
-    return activated_agents_step
+    return activated_agents_step, disconnected_agents
 # custom
