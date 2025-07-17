@@ -195,7 +195,7 @@ async def main():
                 activate_agents=activated_agents
             )
             script_log.info(f"{len(activated_agents)} agents activated")
-            script_log.info(f"{len(disconnected_agents)} agents activated: {disconnected_agents}")
+            script_log.info(f"{len(disconnected_agents)} agents disconnected: {disconnected_agents}")
             await env.step(env_action_empty)
         else:
             sleep = random.randint(
