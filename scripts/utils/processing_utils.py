@@ -115,7 +115,9 @@ def batch_convert_db_contents(
 
 def load_db_json_data(db_json_path, start_str="reddit-sim_",
                       to_df=False):
-    data = {}
+    
+    comment_data = {}
+    user_data = {}
     trace_data = {}
     
     directory = os.fsencode(db_json_path)   
@@ -125,8 +127,10 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
         if simulation_name.startswith(start_str):
             print("Reading: ", simulation_name)
 
-            df_content = pd.DataFrame()
-            json_content = []
+            comment_df = pd.DataFrame()
+            comment_json = []
+            user_df = pd.DataFrame()
+            user_json = []
             trace_df = pd.DataFrame()
             trace_json = []
             
@@ -154,25 +158,30 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
 
 
                 if to_df:
-                    df_content = pd.concat([df_content, pd.DataFrame(content)])
+                    comment_df = pd.concat([comment_df, pd.DataFrame(content)])
+                    user_df = pd.concat([user_df, pd.DataFrame(users)]).drop_duplicates("user_name")
                     trace_df = pd.concat([trace_df, pd.DataFrame(trace)])
                 else:
-                    # return content
-                    json_content.extend(content)
+                    comment_json.extend(content)
+                    user_json.extend(users)
                     trace_json.extend(trace)
                 
             if to_df:
-                data[simulation_name] = df_content.sort_values(
+                comment_data[simulation_name] = comment_df.sort_values(
                     ["seed_post", "created_at"]
                 ).reset_index(drop=True)
+                user_data[simulation_name] = user_df.sort_values(
+                    ["user_id"]
+                ).reset_index(drop=True)[["user_id", "user_name", "created_at"]]
                 trace_data[simulation_name] = trace_df.sort_values(
                     ["created_at"]
                 ).reset_index(drop=True)
             else:
-                data[simulation_name] = json_content
+                comment_data[simulation_name] = comment_json
+                user_data[simulation_name] = user_json
                 trace_data[simulation_name] = trace_json
 
-    return data, trace_data
+    return comment_data, user_data, trace_data
     
 # def load_db_json_data(db_json_path, start_str="reddit-sim_", 
 #                       multi_sim=False,
