@@ -71,7 +71,7 @@ async def main():
         # ActionType.SEARCH_USER,
         # ActionType.TREND,
         # ActionType.REFRESH,
-        ActionType.DO_NOTHING,
+        ActionType.CONTINUE_BROWSING,
         # ActionType.FOLLOW,
         # ActionType.MUTE,
         # ActionType.UNMUTE,

@@ -1362,7 +1362,7 @@ class Platform:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def do_nothing(self, agent_id: int):
+    async def continue_browsing(self, agent_id: int):
         if self.recsys_type == RecsysType.REDDIT:
             current_time = self.sandbox_clock.time_transfer(
                 datetime.now(), self.start_time)
@@ -1372,7 +1372,7 @@ class Platform:
             user_id = agent_id
 
             action_info = {}
-            self.pl_utils._record_trace(user_id, ActionType.DO_NOTHING.value,
+            self.pl_utils._record_trace(user_id, ActionType.CONTINUE_BROWSING.value,
                                         action_info, current_time)
             return {"success": True}
         except Exception as e:

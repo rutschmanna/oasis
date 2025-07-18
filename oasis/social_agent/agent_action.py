@@ -39,10 +39,10 @@ class SocialAction:
                 self.search_user,
                 self.trend,
                 self.refresh,
-                self.do_nothing,
                 self.create_comment,
                 # custom
                 self.create_comment_comment,
+                self.continue_browsing,
                 # custom
                 self.like_comment,
                 self.dislike_comment,
@@ -128,15 +128,32 @@ class SocialAction:
         """
         return await self.perform_action(None, ActionType.REFRESH.value)
 
-    async def do_nothing(self): # custom Perform no action
-        """Abstain from performing any action and participating in the conversation.
+    # custom
+    async def continue_browsing(self):
+        """This method invokes an asynchronous action to continue to browse
+        the social media environment. On successful execution, it returns a 
+        dictionary indicating success.
+        
         Returns:
-            dict: A dictionary with 'success' indicating if the removal was
+            dict: A dictionary with one key-value pair. The 'success' key
+                maps to a boolean indicating whether continuing to browse is
                 successful.
+                
             Example of a successful return:
                 {"success": True}
         """
-        return await self.perform_action(None, ActionType.DO_NOTHING.value)
+        return await self.perform_action(None, ActionType.CONTINUE_BROWSING.value)
+    # custom
+    
+    # async def do_nothing(self):
+    #     """Abstain from performing any action and participating in the conversation.
+    #     Returns:
+    #         dict: A dictionary with 'success' indicating if the removal was
+    #             successful.
+    #         Example of a successful return:
+    #             {"success": True}
+    #     """
+    #     return await self.perform_action(None, ActionType.DO_NOTHING.value)
 
     async def create_post(self, content: str):
         r"""Create a new post with the given content.

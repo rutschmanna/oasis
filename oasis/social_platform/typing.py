@@ -38,8 +38,10 @@ class ActionType(Enum):
     UNLIKE_COMMENT = "unlike_comment"
     DISLIKE_COMMENT = "dislike_comment"
     UNDO_DISLIKE_COMMENT = "undo_dislike_comment"
+    # custom
     CREATE_COMMENT_COMMENT = "create_comment_comment"
-    DO_NOTHING = "do_nothing"
+    CONTINUE_BROWSING = "continue_browsing"
+    # custom
     PURCHASE_PRODUCT = "purchase_product"
 
 class RecsysType(Enum):
