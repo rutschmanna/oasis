@@ -126,7 +126,7 @@ def activation_function(
                 True if activation_threshold < activation_prob else False
             )
 
-        elif i["user_id"] in activated_agents.keys() and inter_event_difference <= timedelta(hours=24) and inter_event_difference > timedelta(hours=12):
+        elif i["user_id"] in activated_agents.keys() and inter_event_difference > timedelta(hours=12):
             i["activated"] = False
             disconnected_agents.append(i["user_id"])
         
