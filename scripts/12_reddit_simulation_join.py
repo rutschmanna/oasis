@@ -79,7 +79,7 @@ async def main():
 
     time_factor = 60/args.clock_factor
     time_steps = int(args.time_steps*time_factor)
-    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/reddit-sim_{args.model_name}_subreddit-{args.subreddit}-{args.time_steps}h/" # _{time.strftime('%H-%M', time.localtime())}
+    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/reddit-sim_{args.model_name}_subreddit-{args.subreddit}-{args.time_steps}h/"
 
     script_log.info(f"Time factor: {time_factor}")
     script_log.info(f"Time steps: {args.time_steps}")
@@ -103,14 +103,6 @@ async def main():
         data=interevent_data_seed
     )
     distribution_fit = fit.lognormal
-
-    # env = oasis.make(
-    #     platform=oasis.DefaultPlatformType.REDDIT
-    #     database_path=db_path,
-    #     agent_profile_path=f"data/reddit/dp{args.persona_file}_personas.json",
-    #     agent_models=llm_model,
-    #     available_actions=available_actions,
-    # )
 
     env = oasis.make(
         platform=Platform(
@@ -163,8 +155,6 @@ async def main():
                 "content": (
                     f"{topics[args.topic]}\n"
                     "Please discuss! This statement serves as starting point for today’s discussion."
-                    # "It neither reflects the opinion of the researchers nor a political "
-                    # "position of the research institution."
                     )
                 }
             )
