@@ -15,7 +15,7 @@ for i in 1 6;
 do
     for j in $(seq 1 20);
     do
-    	python scripts/11_reddit_simulation.py --model-name qwen --time-steps $1 --subreddit "$i" --topic $j --clock-factor 60
+    	python scripts/12_reddit_simulation_join.py --model-name qwen --time-steps $1 --subreddit "$i" --topic $j --clock-factor 60
     
     done
 done
