@@ -11,7 +11,7 @@ import time
 from tqdm import tqdm
 import utils.simulation_utils as su
 
-seed_posts = {
+topics = {
         1: "The US should condemn Israel’s military actions in Gaza as acts of genocide and impose full sanctions.",
         2: "Prostitution should be illegal.",
         3: "Things like gender-neutral language and stating pronouns are silly issues.",
@@ -81,8 +81,8 @@ def batch_convert_db_contents(
             print("Connecting to", simulation_name)
             db_directory_path = f"{db_path}{simulation_name}/"
 
-            for seed_post_db in os.listdir(db_directory_path):
-                db_file_name = os.fsdecode(seed_post_db)
+            for topic_db in os.listdir(db_directory_path):
+                db_file_name = os.fsdecode(topic_db)
                 db_file_path = f"{db_directory_path}{db_file_name}"
                 
                 conn = sqlite3.connect(db_file_path)
@@ -134,17 +134,17 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
             trace_df = pd.DataFrame()
             trace_json = []
             
-            seed_post_directory = f"{db_json_path}{simulation_name}/"
-            for seed_post_dir in os.listdir(seed_post_directory):
-                seed_post_name = os.fsdecode(seed_post_dir)
+            topic_directory = f"{db_json_path}{simulation_name}/"
+            for topic_dir in os.listdir(topic_directory):
+                topic_name = os.fsdecode(topic_dir)
             
-                with open(f"{db_json_path}{simulation_name}/{seed_post_name}/comment.json") as f:
+                with open(f"{db_json_path}{simulation_name}/{topic_name}/comment.json") as f:
                     content = json.load(f)
             
-                with open(f"{db_json_path}{simulation_name}/{seed_post_name}/user.json") as f:
+                with open(f"{db_json_path}{simulation_name}/{topic_name}/user.json") as f:
                     users = json.load(f)
 
-                with open(f"{db_json_path}{simulation_name}/{seed_post_name}/trace.json") as f:
+                with open(f"{db_json_path}{simulation_name}/{topic_name}/trace.json") as f:
                     trace = json.load(f)
     
                 for i in content:
@@ -152,9 +152,18 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
                         if i["user_id"] == j["user_id"]:
                             i["seed_user_id"] = j["user_name"]
                     i["subreddit"] = int(re.findall(r"(?<=subreddit-)\d+", simulation_name)[0])
-                    seed_post_n = int(re.findall(r"\d+", seed_post_name)[0])
-                    i["seed_post"] = seed_post_n
-                    i["seed_post_content"] = seed_posts[seed_post_n]
+                    topic_n = int(re.findall(r"\d+", topic_name)[0])
+                    i["topic"] = topic_n
+                    i["topic_content"] = topics[topic_n]
+
+                for i in trace:
+                    for j in users:
+                        if i["user_id"] == j["user_id"]:
+                            i["seed_user_id"] = j["user_name"]
+                    i["subreddit"] = int(re.findall(r"(?<=subreddit-)\d+", simulation_name)[0])
+                    topic_n = int(re.findall(r"\d+", topic_name)[0])
+                    i["topic"] = topic_n
+                    i["topic_content"] = topics[topic_n]
 
 
                 if to_df:
@@ -168,7 +177,7 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
                 
             if to_df:
                 comment_data[simulation_name] = comment_df.sort_values(
-                    ["seed_post", "created_at"]
+                    ["topic", "created_at"]
                 ).reset_index(drop=True)
                 user_data[simulation_name] = user_df.sort_values(
                     ["user_id"]
@@ -278,33 +287,33 @@ def structure_analysis_df(data, root_id="parent_comment_id"):
     
     # Interaction Volume
     volume = data.groupby(
-        ["subreddit", "seed_post"]
+        ["subreddit", "topic"]
     ).count().iloc[:,0].tolist()
     
     # Structural width analysis
     temp = data[data["parent_comment_id"] == -1]
-    width = temp.groupby(["subreddit", "seed_post"]).count().iloc[:,0].tolist()
+    width = temp.groupby(["subreddit", "topic"]).count().iloc[:,0].tolist()
             
     # Structural depth analysis
     depth = []
-    for i, j in data.groupby(["subreddit", "seed_post"]):
+    for i, j in data.groupby(["subreddit", "topic"]):
         temp = recursive_depth_df(j)
         depth.append(temp)
 
     # Scale
     scale = data.groupby(
-        ["subreddit", "seed_post"]
+        ["subreddit", "topic"]
     )["user_id"].unique().apply(len).tolist()
 
     # Active share
     n = [i[0].item() for i in data.groupby(
-        ["subreddit", "seed_post"]
+        ["subreddit", "topic"]
     )["n_agents"].unique()]
     active = [round(i / j, 3) for i,j in zip(scale, n)]
 
     # Comment Lengths
     comment_lengths = data.groupby(
-        ["subreddit", "seed_post"]
+        ["subreddit", "topic"]
     )["content"].apply(lambda x: [len(i) for i in x]).tolist()
                 
 
