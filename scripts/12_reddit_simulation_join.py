@@ -8,6 +8,10 @@ from datetime import datetime, timedelta
 import logging
 import sys
 import powerlaw
+import json
+from openai import OpenAI
+from tqdm import tqdm
+import re
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -36,10 +40,10 @@ if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
 if "sphinx" not in sys.modules:
-    script_log = logging.getLogger(name="11_reddit_sim")
+    script_log = logging.getLogger(name="reddit_sim")
     script_log.setLevel("DEBUG")
     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    file_handler = logging.FileHandler(f"./log/11_reddit_sim-{datetime.now().strftime('%m-%d')}.log")
+    file_handler = logging.FileHandler(f"/../abyss/home/oasis/oasis-rutschmanna/log/12_reddit_sim-{datetime.now().strftime('%m-%d')}.log")
     file_handler.setLevel("DEBUG")
     file_handler.setFormatter(
         logging.Formatter(
@@ -80,6 +84,7 @@ async def main():
     time_factor = 60/args.clock_factor
     time_steps = int(args.time_steps*time_factor)
     db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/reddit-sim_{args.model_name}_subreddit-{args.subreddit}-{args.time_steps}h/"
+    agent_profile_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/reddit/seed_personas_subreddit_{args.subreddit}.json"
 
     script_log.info(f"Time factor: {time_factor}")
     script_log.info(f"Time steps: {args.time_steps}")
@@ -116,7 +121,7 @@ async def main():
             start_time=datetime(2025, 7, 1, 12, 00, 00) + timedelta(hours=24*(args.topic-1)),
         ),
         database_path=db_path,
-        agent_profile_path=f"data/reddit/seed_personas_subreddit_{args.subreddit}.json",
+        agent_profile_path=agent_profile_path,
         agent_models=llm_model,
         available_actions=available_actions,
         semaphore=16,
@@ -144,6 +149,56 @@ async def main():
         19: "The government should not invest in renewable energy.",
         20: "Airbnb should be banned in cities."
     }
+ 
+    with open(agent_profile_path, "r") as f:
+        profile_data = json.load(f)
+
+    profile_data_df = pd.DataFrame(profile_data).drop(columns="bio")
+    seed_user_ids = profile_data_df["username"]
+    profile_data_df.set_index("username", inplace=True)
+    
+    sys_prompt = """
+    You are a Reddit user. The following survey contains several questions and your answers. The answers are contained between '<' and '>', eg. question: 'How much time do you spend online (browsing the web, using social media, etc.)?', answer: '<multiple hours daily>'. This survey constitutes your persona.
+    This is your survey:
+    
+    {}
+    
+    You will be shown a post from the social media platform Reddit.
+    Your task is to read the post and then give an answer on whether you would like to participate in the discussion related to the given post. Decide only based on what would be most in line with your persona. On Reddit users are faced with a multitude of different conversations to take part in. Since time is limited, they usually cannot contribute to every conversation and have to decide whether the conversation is important enough to spend time on.
+    
+    Please answer by giving a yes or no reply to the question "Would it be in line with your persona to participate in this conversation?". Only answer with 'yes' or 'no'.
+    
+    You are not supposed to be helpful or over eager to join the conversation.
+    Only answer with 'yes' if you really feel that it would be in line with your persona. Otherwise, answer with 'no'.
+    Please consider the following post:
+    """
+    
+    user_prompt = """
+    {}
+    """
+
+    joined_agents = []
+
+    client = OpenAI(
+        api_key="EMPTY",
+        base_url="http://127.0.0.1:8002/v1",
+    )
+
+    for i in tqdm(seed_user_ids):
+        completion = client.chat.completions.create(
+            model=args.model_name,
+            messages=[
+                {"role": "system", "content": sys_prompt.format(profile_data_df.at[i, "persona"])},
+                {"role": "user", "content": user_prompt.format(topics[args.topic])},
+            ],
+            extra_body={
+                "chat_template_kwargs": {"enable_thinking": False}
+            }
+        )
+        if completion.choices[0].message.content == "yes":
+            joined_agents.append(i)
+    
+    script_log.info(f"{len(joined_agents)} Agents joined Thread: {joined_agents}")
 
     # Run the environment
     await env.reset()
@@ -172,12 +227,14 @@ async def main():
     
     for _ in range(time_steps):
         script_log.info(f"Time step {_+1} initiated - {env.platform.sandbox_clock.time_transfer(datetime.now(), env.platform.start_time)}")
+        script_log.info(f"{len(joined_agents)} Agents participating in Topic")
         activated_agents, disconnected_agents = activation_function(
             sample_data.set_index("ParticipantID"),
             db_path,
             env.platform,
             mapping_type=args.base_activation_mapping,
             distribution_fit=distribution_fit,
+            joined_agents=joined_agents,
         )
 
         if len(activated_agents) > 0:

@@ -5,6 +5,24 @@ import random
 from datetime import datetime, timedelta
 import scipy.stats
 import numpy as np
+import os
+import logging
+import sys
+
+log_dir = "./log"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+if "sphinx" not in sys.modules:
+    activation_log = logging.getLogger(name="agent-activation")
+    activation_log.setLevel("DEBUG")
+    now = datetime.now().strftime("%m-%d")
+    file_handler = logging.FileHandler(f"./log/agent_activation-{now}.log")
+    file_handler.setLevel("DEBUG")
+    file_handler.setFormatter(
+        logging.Formatter(
+            "%(levelname)s - %(asctime)s - %(name)s - %(message)s"))
+    activation_log.addHandler(file_handler)
 
 def activation_function(
     data,
@@ -12,6 +30,7 @@ def activation_function(
     env,
     mapping_type,
     distribution_fit,
+    joined_agents,
     print_info=True,
     initiation_ie_time=90,
     inter_burst_time=90*3,
@@ -74,8 +93,11 @@ def activation_function(
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
+    activation_log.info(f"{len(joined_agents)} Agents received from Sim-Script")
+    _ = ','.join(['?'] * len(joined_agents))
+    query = f"SELECT user_id, user_name FROM user WHERE user_name IN ({_})"
     # User data
-    cursor.execute("SELECT user_id, user_name FROM user")
+    cursor.execute(query, joined_agents)
 
     rows = cursor.fetchall()
     columns = [col[0] for col in cursor.description]
@@ -102,14 +124,13 @@ def activation_function(
             activated_agents[i["user_id"]].append(timestamp)
     
     # Decide agent activation
+    activation_log.info(f"{len(db_content)} Agents passed to Activation")
     for i in db_content:
         i["comments_online"] = data.at[i["user_name"], "comments_online"]
         i["activation_prob"] = mapping[i["comments_online"]]
         try:
             last_initiation = activated_agents[i["user_id"]][-1]
-            # print(activated_agents[i["user_id"]][::-1])
             for j in activated_agents[i["user_id"]][::-1]:
-                # print("Diff:", last_initiation - j)
                 if last_initiation - j <= timedelta(minutes=initiation_ie_time):
                     last_initiation = j
                 else:
@@ -153,6 +174,8 @@ def activation_function(
         if i["activated"] == True:
             activated_agents_step.append(i["user_id"])
 
+    activation_log.info(f"{len(activated_agents_step)} Agents activated:\n{activated_agents_step}")
+    activation_log.info(f"{len(disconnected_agents)} Agents disconnected:\n{disconnected_agents}")
     if print_info:
         print("#" * 80)      
         print("Activation function activated:", len(activated_agents_step), "users.")

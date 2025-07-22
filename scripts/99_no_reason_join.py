@@ -68,7 +68,7 @@ def main():
     )
 
     for i in tqdm(seed_user_ids):
-        for j in list(topics.keys())[:2]:
+        for j in list(topics.keys()):
             completion = client.chat.completions.create(
                 model="qwen",
                 messages=[
