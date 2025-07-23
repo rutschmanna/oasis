@@ -34,7 +34,6 @@ def activation_function(
     print_info=True,
     initiation_ie_time=90,
     inter_burst_time=90*3,
-    # recurring_activation_prob_modifier=0,
 ):
     """
     Determines the activation of LLM agents in the OASIS simulation.
