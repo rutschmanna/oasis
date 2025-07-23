@@ -109,6 +109,13 @@ async def main():
     )
     distribution_fit = fit.lognormal
 
+    # Load simulation statistics df
+    sim_stats_path = "/../abyss/home/oasis/oasis-rutschmanna/data/sim_metrics.csv"
+    try:
+        sim_stats = pd.read_csv(sim_stats_path)
+    except:
+        sim_stats = pd.DataFrame()
+
     env = oasis.make(
         platform=Platform(
             db_path=db_path,
@@ -254,6 +261,18 @@ async def main():
 
     # Close the environment
     await env.close()
+
+    sim_stats_topic = pd.DataFrame(
+        {
+            "subreddit": args.subreddit,
+            "topic": args.topic,
+            "joined_agents": [joined_agents],
+            "disconnected_agents": [disconnected_agents],
+            
+        }
+    )
+
+    pd.concat([sim_stats, sim_stats_topic]).to_csv(sim_stats_path, index=False)
 
 if __name__ == "__main__":
     script_log.info("#"*80)

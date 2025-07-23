@@ -11,11 +11,11 @@
 
 # done
 
-for i in 1 6;
+for i in 2 5;
 do
     for j in $(seq 1 20);
     do
-    	python scripts/12_reddit_simulation_join.py --model-name qwen --time-steps $1 --subreddit "$i" --topic $j --clock-factor 60
+    	python scripts/14_sim_incentives.py --model-name qwen --time-steps $1 --subreddit "$i" --topic $j --clock-factor 60
     
     done
 done
