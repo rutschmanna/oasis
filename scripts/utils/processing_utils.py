@@ -395,6 +395,7 @@ def query_perspective_df(data, content_col, api_key):
     for i in tqdm(data[content_col]):
         req = {
             "comment": {"text": i},
+            "languages": ["en"],
             "requestedAttributes": {"TOXICITY": {}}
         }
         
