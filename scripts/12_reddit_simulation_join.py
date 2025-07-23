@@ -198,7 +198,7 @@ async def main():
         if completion.choices[0].message.content == "yes":
             joined_agents.append(i)
     
-    script_log.info(f"{len(joined_agents)} Agents joined Thread: {joined_agents}")
+    script_log.info(f"{len(joined_agents)} Agents joined Thread {args.topic}: {joined_agents}")
 
     # Run the environment
     await env.reset()
@@ -221,13 +221,13 @@ async def main():
     )
 
     # Perform the actions
-    script_log.info(f"{len(activated_agents)} agents activated")
-    script_log.info(f"Seed post - Intervention executed")
+    script_log.info(f"{len(activated_agents)} Agents activated")
+    script_log.info(f"Topic {args.topic} - Intervention executed")
     await env.step(env_action_1)
     
     for _ in range(time_steps):
-        script_log.info(f"Time step {_+1} initiated - {env.platform.sandbox_clock.time_transfer(datetime.now(), env.platform.start_time)}")
-        script_log.info(f"{len(joined_agents)} Agents participating in Topic")
+        script_log.info(f"Topic {args.topic} - Time step {_+1} initiated - {env.platform.sandbox_clock.time_transfer(datetime.now(), env.platform.start_time)}")
+        script_log.info(f"{len(joined_agents)} Agents participating in Topic {args.topic}")
         activated_agents, disconnected_agents = activation_function(
             sample_data.set_index("ParticipantID"),
             db_path,
@@ -241,8 +241,8 @@ async def main():
             env_action_empty = EnvAction(
                 activate_agents=activated_agents
             )
-            script_log.info(f"{len(activated_agents)} agents activated")
-            script_log.info(f"{len(disconnected_agents)} agents disconnected: {disconnected_agents}")
+            script_log.info(f"{len(activated_agents)} agent(s) activated")
+            script_log.info(f"{len(disconnected_agents)} agent(s) disconnected: {disconnected_agents}")
             await env.step(env_action_empty)
         else:
             sleep = random.randint(
@@ -257,9 +257,9 @@ async def main():
 
 if __name__ == "__main__":
     script_log.info("#"*80)
-    script_log.info("Initialized")
+    script_log.info(f"Initialized - Topic {args.topic}")
     script_log.info("#"*80)
     asyncio.run(main())
     script_log.info("#"*80)
-    script_log.info("Done")
+    script_log.info(f"Done - Topic {args.topic}")
     script_log.info("#"*80)
