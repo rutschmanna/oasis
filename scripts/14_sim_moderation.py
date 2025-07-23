@@ -27,8 +27,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model-name", help="str model name")
 parser.add_argument("--ip", help="ip of vllm server", default="127.0.0.1")
 parser.add_argument("--port", help="port of vllm entry", default="8002")
-parser.add_argument("--time-steps", help="# of simulation steps",  type=int,  default=3)
-parser.add_argument("--subreddit", help="file containing personas", type=int, default=1)
+parser.add_argument("--time-steps", help="# of simulation steps",  type=int,  default=24)
+parser.add_argument("--subreddit", help="file containing personas", type=int, default=2)
 parser.add_argument("--topic", help="int key for respective seed post", type=int, default=1)
 parser.add_argument("--clock-factor", help="int value for sandbox time modificator", type=int, default=60)
 parser.add_argument("--base-activation-mapping", help="'comment', 'rare_comment', 'very_rare_comment'", type=str, default="comments")
@@ -165,22 +165,22 @@ async def main():
     profile_data_df.set_index("username", inplace=True)
     
     sys_prompt = """
-    You are a Reddit user. The following survey contains several questions and your answers. The answers are contained between '<' and '>', eg. question: 'How much time do you spend online (browsing the web, using social media, etc.)?', answer: '<multiple hours daily>'. This survey constitutes your persona.
+    You are a Reddit user. The following survey contains several questions and your answers. The answers are contained between '<' and '>' (eg. question: 'How much time do you spend online (browsing the web, using social media, etc.)?', answer: '<multiple hours daily>'). This survey constitutes your persona.
     This is your survey:
     
     {}
     
     You will be shown a post from the social media platform Reddit.
-    Your task is to read the post and then give an answer on whether you would like to participate in the discussion related to the given post. Decide only based on what would be most in line with your persona. On Reddit users are faced with a multitude of different conversations to take part in. Since time is limited, they usually cannot contribute to every conversation and have to decide whether the conversation is important enough to spend time on.
+    Your task is to read the post and then give an answer on whether you would like to participate in the discussion related to the given post. Decide only based on what would be most in line with your persona. On Reddit users are faced with a multitude of different conversations to take part in. Since time is limited, they usually cannot contribute to every conversation and have to decide whether the conversation is important enough to spend their time on it.
     
     Please answer by giving a yes or no reply to the question "Would it be in line with your persona to participate in this conversation?". Only answer with 'yes' or 'no'.
     
     You are not supposed to be helpful or over eager to join the conversation.
     Only answer with 'yes' if you really feel that it would be in line with your persona. Otherwise, answer with 'no'.
-    Please consider the following post:
     """
     
     user_prompt = """
+    Please consider the following post:
     {}
     """
 
@@ -216,7 +216,12 @@ async def main():
             args={
                 "content": (
                     f"{topics[args.topic]}\n"
-                    "Please discuss! This statement serves as starting point for today’s discussion."
+                    "Please discuss! This statement serves as starting point for today’s discussion.\n"
+                    "Please be civil, respectful, and on-topic while discussing the political issues"
+                    " of the day. Avoid harassment, discrimination, or offensive language. We use"
+                    " strict spam filters and reserve the right to selectively remove users from"
+                    " the community due to non-compliance with our rules. Anyone removed from the"
+                    " community will be excluded from further participation."
                     )
                 }
             )
