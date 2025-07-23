@@ -257,9 +257,9 @@ async def main():
 
 if __name__ == "__main__":
     script_log.info("#"*80)
-    script_log.info(f"Initialized - Topic {args.topic}")
+    script_log.info(f"Initialized - Sub {args.subreddit} Topic {args.topic}")
     script_log.info("#"*80)
     asyncio.run(main())
     script_log.info("#"*80)
-    script_log.info(f"Done - Topic {args.topic}")
+    script_log.info(f"Done - Sub {args.subreddit} Topic {args.topic}")
     script_log.info("#"*80)
