@@ -110,7 +110,7 @@ async def main():
     distribution_fit = fit.lognormal
 
     # Load simulation statistics df
-    sim_stats_path = "/../abyss/home/oasis/oasis-rutschmanna/data/sim_metrics.csv"
+    sim_stats_path = "/../abyss/home/oasis/data/sim_metrics.csv"
     try:
         sim_stats = pd.read_csv(sim_stats_path)
     except:
@@ -172,6 +172,7 @@ async def main():
     
     You will be shown a post from the social media platform Reddit.
     Your task is to read the post and then give an answer on whether you would like to participate in the discussion related to the given post. Decide only based on what would be most in line with your persona. On Reddit users are faced with a multitude of different conversations to take part in. Since time is limited, they usually cannot contribute to every conversation and have to decide whether the conversation is important enough to spend their time on it.
+    In addition to your persona, please consider that for every day on which you write at least one serious comment, you collect $2. For example, if you comment every working day, you’ll receive an extra $40 at the end of a four week period!
     
     Please answer by giving a yes or no reply to the question "Would it be in line with your persona to participate in this conversation?". Only answer with 'yes' or 'no'.
     
@@ -218,8 +219,8 @@ async def main():
                     f"{topics[args.topic]}\n"
                     "Please discuss! This statement serves as starting point for today’s discussion.\n"
                     "Remember, for every day on which you write at least one serious comment, you"
-                    " collect an extra $2. For example, if you comment every working day, you’ll"
-                    " receive an extra $40 at the end of a 20 day period!"
+                    " collect $2. For example, if you comment every working day, you’ll"
+                    " receive an extra $40 at the end of a four week period!"
                     )
                 }
             )

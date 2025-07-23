@@ -110,7 +110,7 @@ async def main():
     distribution_fit = fit.lognormal
 
     # Load simulation statistics df
-    sim_stats_path = "/../abyss/home/oasis/oasis-rutschmanna/data/sim_metrics.csv"
+    sim_stats_path = "/../abyss/home/oasis/data/sim_metrics.csv"
     try:
         sim_stats = pd.read_csv(sim_stats_path)
     except:

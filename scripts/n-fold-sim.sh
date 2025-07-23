@@ -1,17 +1,24 @@
 #!/bin/bash
 
-# echo $1
-# echo $2
-
-# echo $1
-
-# for i in $(seq 1 20);
+# for i in 1 6;
 # do
-#     python scripts/11_reddit_simulation.py --model-name qwen --time-steps $1 --subreddit 3 --topic $i --clock-factor 60
-
+#     for j in $(seq 1 20);
+#     do
+#     	python scripts/14_sim_control.py --model-name qwen --time-steps $1 --subreddit "$i" --topic $j --clock-factor 60
+    
+#     done
 # done
 
-for i in 2 5;
+# for i in 2 5;
+# do
+#     for j in $(seq 1 20);
+#     do
+#     	python scripts/14_sim_moderation.py --model-name qwen --time-steps $1 --subreddit "$i" --topic $j --clock-factor 60
+    
+#     done
+# done
+
+for i in 3 4;
 do
     for j in $(seq 1 20);
     do
@@ -19,10 +26,3 @@ do
     
     done
 done
-
-# echo $1
-
-# for i in $(seq 1 6);
-# do
-#     python scripts/11_reddit_simulation_multitopic.py --model-name qwen --time-steps $1 --persona-file $i # --seed-post $j
-# done
