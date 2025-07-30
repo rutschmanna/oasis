@@ -69,9 +69,12 @@ def convert_db_contents(db_file,
 def batch_convert_db_contents(
     start_str,
     base_path="/../abyss/home/oasis/oasis-rutschmanna/data",
+    subdir="",
 ):
-    
-    db_path = f"{base_path}/dbs/"
+    if subdir == "":
+        db_path = f"{base_path}/dbs/"
+    else:
+        db_path = f"{base_path}/dbs/{subdir}/"
     
     db_directory = os.fsencode(db_path)    
     for simulation_dir in os.listdir(db_directory):
