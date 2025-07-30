@@ -43,7 +43,7 @@ if "sphinx" not in sys.modules:
     script_log = logging.getLogger(name="reddit_sim")
     script_log.setLevel("DEBUG")
     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    file_handler = logging.FileHandler(f"/../abyss/home/oasis/oasis-rutschmanna/log/12_reddit_sim-{datetime.now().strftime('%m-%d')}.log")
+    file_handler = logging.FileHandler(f"/../abyss/home/oasis/oasis-rutschmanna/log/14_reddit_sim-{datetime.now().strftime('%m-%d')}.log")
     file_handler.setLevel("DEBUG")
     file_handler.setFormatter(
         logging.Formatter(
@@ -83,7 +83,7 @@ async def main():
 
     time_factor = 60/args.clock_factor
     time_steps = int(args.time_steps*time_factor)
-    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/reddit-sim_{args.model_name}_subreddit-{args.subreddit}-{args.time_steps}h/"
+    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/reddit-sim_{args.model_name}_control_subreddit-{args.subreddit}-{args.time_steps}h/"
     agent_profile_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/reddit/seed_personas_subreddit_{args.subreddit}.json"
 
     script_log.info(f"Time factor: {time_factor}")
