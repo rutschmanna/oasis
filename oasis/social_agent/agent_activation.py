@@ -155,8 +155,9 @@ def activation_function(
 
             if x_prelim < distribution_fit.xmin:
                 x = distribution_fit.xmin
-            elif x_prelim > distribution_fit.xmax:
-                x = distribution_fit.xmax
+            elif distribution_fit.xmax != None:
+                if x_prelim > distribution_fit.xmax:
+                    x = distribution_fit.xmax
             else:
                 x = x_prelim
 
