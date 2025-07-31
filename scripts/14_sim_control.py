@@ -104,7 +104,7 @@ async def main():
     )["interevent_diff"]
     fit = powerlaw.Fit(
         xmin=interevent_data_seed.min(), 
-        xmax=interevent_data_seed.max(), 
+        # xmax=interevent_data_seed.max(),
         data=interevent_data_seed
     )
     distribution_fit = fit.lognormal
