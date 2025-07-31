@@ -8,12 +8,13 @@ from utils.processing_utils import batch_convert_db_contents, load_db_json_data
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--start-str", help="str of target sim directory", type=str)
+parser.add_argument("--subdir", help="str of optional sub-directory", type=str, default="")
 args = parser.parse_args()
 
 np.set_printoptions(legacy='1.25')
 start_str = args.start_str
 
-batch_convert_db_contents(start_str=start_str)
+batch_convert_db_contents(start_str=start_str, subdir=args.subdir)
 
 sim_discussions, sim_user, sim_trace = load_db_json_data(
     "/../abyss/home/oasis/oasis-rutschmanna/data/db_json/",
