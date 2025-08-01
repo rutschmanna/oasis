@@ -3,12 +3,13 @@ import os
 import pandas as pd
 import numpy as np
 import argparse
+import pathlib
 
 from utils.processing_utils import batch_convert_db_contents, load_db_json_data
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--start-str", help="str of target sim directory", type=str)
-parser.add_argument("--subdir", help="str of optional sub-directory", type=str, default="")
+parser.add_argument("--subdir", help="str of optional sub-directory", type=str, default=".")
 args = parser.parse_args()
 
 np.set_printoptions(legacy='1.25')
@@ -17,13 +18,13 @@ start_str = args.start_str
 batch_convert_db_contents(start_str=start_str, subdir=args.subdir)
 
 sim_discussions, sim_user, sim_trace = load_db_json_data(
-    "/../abyss/home/oasis/oasis-rutschmanna/data/db_json/",
+    f"/../abyss/home/oasis/oasis-rutschmanna/data/db_json/{args.subdir}/",
     start_str,
     to_df=True
 )
 
 sim_discussions_json, sim_user_json, sim_trace_json = load_db_json_data(
-    "/../abyss/home/oasis/oasis-rutschmanna/data/db_json/",
+    f"/../abyss/home/oasis/oasis-rutschmanna/data/db_json/{args.subdir}/",
     start_str
 )
 
@@ -190,11 +191,12 @@ sim_trace_data = sim_trace_data[[
 discussions_data = discussions_data[discussions_data["ParticipantID"].isin(sim_user_data["seed_user_id"])]
 user_data = user_data[user_data["ParticipantID"].isin(sim_user_data["seed_user_id"])]
 
-sim_discussions_data.to_csv("/../abyss/home/oasis/data/sim_discussions_data.csv",
+pathlib.Path(f"/../abyss/home/oasis/data/{args.subdir}").mkdir(exist_ok=True)
+sim_discussions_data.to_csv(f"/../abyss/home/oasis/data/{args.subdir}/sim_discussions_data.csv",
                            index=False)
-sim_user_data.to_csv("/../abyss/home/oasis/data/sim_user_data.csv",
+sim_user_data.to_csv(f"/../abyss/home/oasis/data/{args.subdir}/sim_user_data.csv",
                            index=False)
-sim_trace_data.to_csv("/../abyss/home/oasis/data/sim_trace_data.csv",
+sim_trace_data.to_csv(f"/../abyss/home/oasis/data/{args.subdir}/sim_trace_data.csv",
                            index=False)
 
 discussions_data["subreddit"] = discussions_data["subreddit"].apply(lambda x: int(x[-1]))
