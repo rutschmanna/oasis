@@ -69,12 +69,10 @@ def convert_db_contents(db_file,
 def batch_convert_db_contents(
     start_str,
     base_path="/../abyss/home/oasis/oasis-rutschmanna/data",
-    subdir="",
+    subdir=".",
 ):
-    if subdir == "":
-        db_path = f"{base_path}/dbs/"
-    else:
-        db_path = f"{base_path}/dbs/{subdir}/"
+    
+    db_path = f"{base_path}/dbs/{subdir}/"
     
     db_directory = os.fsencode(db_path)    
     for simulation_dir in os.listdir(db_directory):
@@ -103,15 +101,16 @@ def batch_convert_db_contents(
                     columns = [col[0] for col in cursor.description]
                     db_content = [dict(zip(columns, row)) for row in rows]
             
-                    pathlib.Path(f"{base_path}/db_json/{simulation_name}").mkdir(exist_ok=True)
-                    pathlib.Path(f"{base_path}/db_json/{simulation_name}/{db_file_name[:-3]}").mkdir(exist_ok=True)
+                    pathlib.Path(f"{base_path}/db_json/{subdir}").mkdir(exist_ok=True)
+                    pathlib.Path(f"{base_path}/db_json/{subdir}/{simulation_name}").mkdir(exist_ok=True)
+                    pathlib.Path(f"{base_path}/db_json/{subdir}/{simulation_name}/{db_file_name[:-3]}").mkdir(exist_ok=True)
                     
                     with open(
-                        f"{base_path}/db_json/{simulation_name}/{db_file_name[:-3]}/{table_name}.json", "w"
+                        f"{base_path}/db_json/{subdir}/{simulation_name}/{db_file_name[:-3]}/{table_name}.json", "w"
                     ) as f:
                         json.dump(db_content, f, indent=4)
                 
-                print(f"Tables saved at {base_path}/db_json/{simulation_name}/{db_file_name[:-3]}/")
+                print(f"Tables saved at {base_path}/db_json/{subdir}/{simulation_name}/{db_file_name[:-3]}/")
             
             
                 conn.close()
