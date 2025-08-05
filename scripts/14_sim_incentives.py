@@ -12,6 +12,7 @@ import json
 from openai import OpenAI
 from tqdm import tqdm
 import re
+import pathlib
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -29,6 +30,7 @@ parser.add_argument("--ip", help="ip of vllm server", default="127.0.0.1")
 parser.add_argument("--port", help="port of vllm entry", default="8002")
 parser.add_argument("--time-steps", help="# of simulation steps",  type=int,  default=24)
 parser.add_argument("--subreddit", help="file containing personas", type=int, default=3)
+parser.add_argument("--n-run", help="int run number", type=int, default=1)
 parser.add_argument("--topic", help="int key for respective seed post", type=int, default=1)
 parser.add_argument("--clock-factor", help="int value for sandbox time modificator", type=int, default=60)
 parser.add_argument("--base-activation-mapping", help="'comment', 'rare_comment', 'very_rare_comment'", type=str, default="comments")
@@ -51,6 +53,9 @@ if "sphinx" not in sys.modules:
     script_log.addHandler(file_handler)
 
 async def main():
+
+    n_run = "{:02d}".format(args.n_run) + "_run"
+    
     # Define the model for the agents
     llm_model = ModelFactory.create(
         model_platform=ModelPlatformType.VLLM,
@@ -83,7 +88,7 @@ async def main():
 
     time_factor = 60/args.clock_factor
     time_steps = int(args.time_steps*time_factor)
-    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/reddit-sim_{args.model_name}_subreddit-{args.subreddit}-{args.time_steps}h/"
+    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/{n_run}/reddit-sim_{args.model_name}_subreddit-{args.subreddit}-{args.time_steps}h/"
     agent_profile_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/reddit/seed_personas_subreddit_{args.subreddit}.json"
 
     script_log.info(f"Time factor: {time_factor}")
@@ -110,7 +115,8 @@ async def main():
     distribution_fit = fit.lognormal
 
     # Load simulation statistics df
-    sim_stats_path = "/../abyss/home/oasis/data/sim_metrics.csv"
+    pathlib.Path(f"/../abyss/home/oasis/data/{n_run}").mkdir(exist_ok=True)
+    sim_stats_path = f"/../abyss/home/oasis/data/{n_run}/sim_metrics.csv"
     try:
         sim_stats = pd.read_csv(sim_stats_path)
     except:
