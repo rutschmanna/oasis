@@ -407,4 +407,29 @@ def query_perspective_df(data, content_col, api_key):
 
     data[f"{content_col}_toxicity"] = perspective_results
 
-    return data    
+    return data
+
+def query_perspective(data, api_key):
+    try:
+        client = discovery.build(
+          "commentanalyzer",
+          "v1alpha1",
+          developerKey=api_key,
+          discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
+          static_discovery=False,
+        )
+        
+        req = {
+            "comment": {"text": data},
+            "languages": ["en"],
+            "requestedAttributes": {"TOXICITY": {}}
+        }
+        
+        resp = client.comments().analyze(body=req).execute()
+        time.sleep(1)
+        out = resp["attributeScores"]["TOXICITY"]["summaryScore"]["value"]
+
+    except:
+        out = np.NaN()
+
+    return out    
