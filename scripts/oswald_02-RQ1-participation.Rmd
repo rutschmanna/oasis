@@ -1,0 +1,1135 @@
+---
+title: "RQ1: Discussion Participation"
+subtitle: "Reddit Communities Field Experiment"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, out.width = "90%", out.height = "70%",message=F, warning=F)
+```
+
+```{r}
+library(tidyverse)
+library(readr)
+library(gridExtra)
+library(haven)
+library(RColorBrewer)
+library(estimatr)
+library(ggridges)
+library(DescTools)
+# library(lme4)
+library(brms)
+library(purrr)
+library(tableone)
+library(pscl)
+library(ggcorrplot)
+library(kableExtra)
+```
+
+Import data (no comment texts, open comments, usernames or email addresses)
+```{r}
+# reddit data
+user_data <- read_csv("data/users_anon.csv")
+discussion_data <- read_csv("sim_discussions_data.csv") |> 
+  rename(
+    "comment_toxicity" = "content_toxicity",
+    
+  )
+external_data <- read_csv("data/external_reddit_anon.csv")
+
+# survey data
+pre_survey <- read_csv("data/pre_survey_anon.csv")
+post_surveys <- read_csv("data/post_surveys_anon.csv")
+
+# sample (combined data)
+sample <- read_csv("sim_sample_data.csv") |> 
+  rename(
+    "ParticipantID" = "seed_user_id",
+    "comment_count" = "sim_comment_count",
+    "comment_mean_score" = "sim_comment_mean_score"
+  )
+```
+
+Preprocessing, combining pre and post surveys 
+```{r}
+# average group toxicity
+group_toxicity_dat <- discussion_data%>%
+  mutate(subreddit_w1 = subreddit)%>%
+  group_by(subreddit_w1)%>%
+  mutate(group_toxicity = mean(comment_toxicity, na.rm=T))%>%
+  select(subreddit_w1, group_toxicity)%>%
+  slice(1)%>%
+  ungroup()
+
+# any check-in surveys answered
+any_check <- post_surveys%>%
+  group_by(ParticipantID)%>%
+  mutate(any_checkin = 1)%>%
+  slice(1)%>%
+  pull(ParticipantID)
+
+post_1 <- post_surveys%>%filter(survey_week == 1)
+post_2 <- post_surveys%>%filter(survey_week == 2)
+post_3 <- post_surveys%>%filter(survey_week == 3)
+post_4 <- post_surveys%>%filter(survey_week == 4)
+
+# pre-post data (combining pre and post surveys) 
+full_data <- left_join(sample, post_1, by = "ParticipantID", suffix = c("_w1" , "_w2"))%>%
+  left_join(., post_2, by = "ParticipantID", suffix = c("" , "_w3"))%>%
+  left_join(., post_3, by = "ParticipantID", suffix = c("" , "_w4"))%>%
+  left_join(., post_4, by = "ParticipantID", suffix = c("" , "_w5"))%>%
+  left_join(.,group_toxicity_dat, by = "subreddit_w1")%>%
+  mutate(active = ifelse(is.na(comment_count), 0, 1),
+         condition = factor(condition),
+         active2 = ifelse(!ParticipantID %in% any_check & active == 0, "inactive", active))
+
+write_csv(full_data, file = "../data/anon/full_data_waves.csv")
+```
+
+Data Scaling for models 
+https://onlinelibrary.wiley.com/doi/10.1002/sim.3107
+```{r}
+# scale data for better comparison of coefficients
+gelman_scale <- function(x){
+  ( (x - mean(x, na.rm=T)) / (2*sd(x, na.rm=TRUE)))
+}
+
+scaled_sample <- full_data%>%
+  # generation of check-in variables (average over check-ins)
+  mutate(mean_issue_distance_abs = rowMeans(select(., starts_with("issue_distance_abs")), na.rm = TRUE),
+         mean_discussion_constructive = rowMeans(select(., starts_with("discussion_percep_2")), na.rm = TRUE),
+         mean_discussion_enjoyable = rowMeans(select(., starts_with("discussion_percep_3")), na.rm = TRUE),
+         mean_discussion_toxic = rowMeans(select(., starts_with("discussion_percep_1")), na.rm = TRUE),
+         mean_group_knowledgeable = rowMeans(select(., starts_with("group_percep_3")), na.rm = TRUE), 
+         mean_group_polarized = rowMeans(select(., starts_with("group_percep_2")), na.rm = TRUE),
+         mean_group_respectful = rowMeans(select(., starts_with("group_percep_1")), na.rm = TRUE))%>%
+  # scale selected variables with Gelman (2008) method by dividing by two standard deviations
+  select(ParticipantID, condition, subreddit_w1, comment_count, comment_mean_tox, comment_mean_score,
+         active, active2, gender, age, education, comments_online_w1,  group_toxicity,
+         leftright_w1, polinterest_w1, affective_polarization_w1, 
+         affective_pol_1_w1,affective_pol_2_w1,
+         pol_cynicism_w1, efficacy_w1, trust_general_1_w1,
+         trust_general_2_w1,trust_general_3_w1,trust_general_4_w1,
+         mean_issue_distance_abs, mean_discussion_constructive, 
+         mean_discussion_enjoyable, mean_discussion_toxic, 
+         mean_group_knowledgeable, mean_group_polarized, 
+         mean_group_respectful)%>%
+  mutate(across(c(age:mean_group_respectful), gelman_scale))%>%
+  mutate(comment_count = ifelse(is.na(comment_count),0,comment_count),
+         gender_male = factor(ifelse(gender == 1, 1, 0)))
+
+write_csv(scaled_sample, file = "../data/anon/scaled_sample.csv")
+```
+
+# Participation Prediction
+
+## Zero Hurdle Models for Count data
+https://search.r-project.org/CRAN/refmans/pscl/html/hurdle.html
+
+```{r}
+# correspondence between perceptions and external measures
+# cor.test(scaled_sample$mean_discussion_toxic, scaled_sample$group_toxicity)
+
+present_sample <- scaled_sample%>%
+  filter(active2 != "inactive")%>%
+  # also include external measure of group toxicity
+  mutate(group_toxicity = gelman_scale(group_toxicity)) 
+
+models <- list(
+  hurdle(comment_count ~ gender_male, data = present_sample),
+  hurdle(comment_count ~ age, data = present_sample),
+  hurdle(comment_count ~ education, data = present_sample),
+  hurdle(comment_count ~ comments_online_w1, data = present_sample),
+  # hurdle(comment_count ~ comment_karma, data = present_sample),
+  hurdle(comment_count ~ leftright_w1, data = present_sample),
+  hurdle(comment_count ~ polinterest_w1, data = present_sample),
+  hurdle(comment_count ~ affective_polarization_w1, data = present_sample),
+  hurdle(comment_count ~ trust_general_1_w1, data = present_sample),
+  hurdle(comment_count ~ trust_general_2_w1, data = present_sample),
+  hurdle(comment_count ~ trust_general_3_w1, data = present_sample),
+  hurdle(comment_count ~ trust_general_4_w1, data = present_sample)
+  # hurdle(comment_count ~ mean_issue_distance_abs, data = present_sample),
+  # hurdle(comment_count ~ mean_group_respectful, data = present_sample),
+  # hurdle(comment_count ~ mean_group_knowledgeable, data = present_sample),
+  # hurdle(comment_count ~ mean_group_polarized, data = present_sample),
+  # hurdle(comment_count ~ mean_discussion_enjoyable, data = present_sample),
+  # hurdle(comment_count ~ mean_discussion_constructive, data = present_sample),
+  # hurdle(comment_count ~ mean_discussion_toxic, data = present_sample),
+  # hurdle(comment_count ~ group_toxicity, data = present_sample)
+)
+
+predictors <- c(
+  "Gender (male)", "Age", "Education", "Commenting online", "Comment karma", "Political orientation",
+  "Political interest", "Affective polarization", "Trust in politics","Trust in media",
+  "Trust in science", "Trust in others", "Issue distance",
+  "Group respectful", "Group knowledgeable", "Group polarized",
+  "Discussion enjoyable",  "Discussion constructive","Discussion toxic",
+   "Average group toxicity")
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_summary <- summary(models[[i]])
+  
+  count_model_coef <- as.data.frame(model_summary$coefficients$count)
+  count_model_coef$Predictor <- predictors[i]
+  count_model_coef$Model <- "Count Model"
+  count_model_coef <- count_model_coef %>%
+    filter(row.names(.) != "(Intercept)") %>%
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
+  zero_hurdle_coef$Predictor <- predictors[i]
+  zero_hurdle_coef$Model <- "Zero Hurdle Model"
+  zero_hurdle_coef <- zero_hurdle_coef %>%
+    filter(row.names(.) != "(Intercept)") %>%
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  model_frames[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
+}
+
+combined_df <- do.call(rbind, model_frames)
+
+combined_df <- combined_df %>%
+  mutate(Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+interval2 <- -qnorm((1 - 0.95) / 2)
+
+comment_plot_pred_active_hurdle_ext <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(AlphaValue))) + 
+  geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "black",
+                  lwd = 1, position = position_dodge(width = 2 / 3)) + 
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) + 
+  coord_flip() +
+  ggtitle("Prediction of user-level discussion participation") +
+  xlab("") +
+  ylab("Zero hurdle models for count data regression") +
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+ggsave("output/comment_plot_pred_hurdle_with_external.pdf", comment_plot_pred_active_hurdle_ext, width = 6, height = 4)
+
+comment_plot_pred_active_hurdle_ext
+```
+
+### Geometric distribution (instead of default poisson)
+```{r}
+models <- list(
+  hurdle(comment_count ~ gender_male, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ age, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ education, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ comments_online_w1, data = present_sample, dist = "geometric"),
+  # hurdle(comment_count ~ comment_karma, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ leftright_w1, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ polinterest_w1, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ affective_polarization_w1, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ trust_general_1_w1, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ trust_general_2_w1, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ trust_general_3_w1, data = present_sample, dist = "geometric"),
+  hurdle(comment_count ~ trust_general_4_w1, data = present_sample, dist = "geometric")
+  # hurdle(comment_count ~ mean_issue_distance_abs, data = present_sample, dist = "geometric"),
+  # hurdle(comment_count ~ mean_group_respectful, data = present_sample, dist = "geometric"),
+  # hurdle(comment_count ~ mean_group_knowledgeable, data = present_sample, dist = "geometric"),
+  # hurdle(comment_count ~ mean_group_polarized, data = present_sample, dist = "geometric"),
+  # hurdle(comment_count ~ mean_discussion_enjoyable, data = present_sample, dist = "geometric"),
+  # hurdle(comment_count ~ mean_discussion_toxic, data = present_sample, dist = "geometric"),
+  # hurdle(comment_count ~ mean_discussion_constructive, data = present_sample, dist = "geometric")
+)
+
+predictors <- c(
+  "Gender (male)", "Age", "Education", "Commenting online", "Political orientation",
+  "Political interest", "Affective polarization", "Trust in politics", "Trust in media",
+  "Trust in science", "Trust in others"
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_summary <- summary(models[[i]])
+  
+  count_model_coef <- as.data.frame(model_summary$coefficients$count)
+  count_model_coef$Predictor <- predictors[i]
+  count_model_coef$Model <- "Count Model"  
+  count_model_coef <- count_model_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
+  zero_hurdle_coef$Predictor <- predictors[i]
+  zero_hurdle_coef$Model <- "Zero Hurdle Model"  
+  zero_hurdle_coef <- zero_hurdle_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  model_frames[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
+}
+
+combined_df <- do.call(rbind, model_frames)
+
+combined_df <- combined_df %>%
+  mutate(Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+comment_plot_pred_active_hurdle_geometric <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(AlphaValue))) + 
+  geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "black",
+                  lwd = 1, position = position_dodge(width = 2 / 3)) + 
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) + 
+  coord_flip() +
+  ggtitle("Prediction of user-level discussion participation") +
+  xlab("") +
+  ylab("Zero hurdle models for count data regression (geometric, binomial)") +
+  facet_wrap(~ Model, ncol = 2, scales = "free_x")  +
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+ggsave("output/comment_plot_pred_hurdle_geometric.pdf", comment_plot_pred_active_hurdle_geometric, width = 6, height = 4)
+
+comment_plot_pred_active_hurdle_geometric
+```
+
+### Negative Binomial
+```{r}
+models <- list(
+  hurdle(comment_count ~ gender_male, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ age, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ education, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ comments_online_w1, data = present_sample, dist = "negbin"),
+  # hurdle(comment_count ~ comment_karma, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ leftright_w1, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ polinterest_w1, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ affective_polarization_w1, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ trust_general_1_w1, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ trust_general_2_w1, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ trust_general_3_w1, data = present_sample, dist = "negbin"),
+  hurdle(comment_count ~ trust_general_4_w1, data = present_sample, dist = "negbin")
+  # hurdle(comment_count ~ mean_issue_distance_abs, data = present_sample, dist = "negbin"),
+  # hurdle(comment_count ~ mean_group_respectful, data = present_sample, dist = "negbin"),
+  # hurdle(comment_count ~ mean_group_knowledgeable, data = present_sample, dist = "negbin"),
+  # hurdle(comment_count ~ mean_group_polarized, data = present_sample, dist = "negbin"),
+  # hurdle(comment_count ~ mean_discussion_enjoyable, data = present_sample, dist = "negbin"),
+  # hurdle(comment_count ~ mean_discussion_toxic, data = present_sample, dist = "negbin"),
+  # hurdle(comment_count ~ mean_discussion_constructive, data = present_sample, dist = "negbin")
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_summary <- summary(models[[i]])
+  
+  count_model_coef <- as.data.frame(model_summary$coefficients$count)
+  count_model_coef$Predictor <- predictors[i]
+  count_model_coef$Model <- "Count Model"  
+  count_model_coef <- count_model_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>% 
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
+  zero_hurdle_coef$Predictor <- predictors[i]
+  zero_hurdle_coef$Model <- "Zero Hurdle Model" 
+  zero_hurdle_coef <- zero_hurdle_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>% 
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  model_frames[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
+}
+
+combined_df <- do.call(rbind, model_frames)
+
+combined_df <- combined_df %>%
+  rownames_to_column()%>%
+  filter(!str_detect(rowname,"theta"))%>%
+  mutate(Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+comment_plot_pred_active_hurdle_negbin <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(AlphaValue))) + 
+  geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "black",
+                  lwd = 1, position = position_dodge(width = 2 / 3)) + 
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) + 
+  coord_flip() +
+  ggtitle("Prediction of user-level discussion participation") +
+  xlab("") +
+  ylab("Zero hurdle models for count data regression (negbin, binomial)") +
+  facet_wrap(~ Model, ncol = 2, scales = "free_x") +
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+# Save the plot with "negbin" in the file name
+ggsave("output/comment_plot_pred_hurdle_negbin.pdf", comment_plot_pred_active_hurdle_negbin, width = 6, height = 4)
+
+# Display the plot
+comment_plot_pred_active_hurdle_negbin
+```
+
+### Binary Active vs. Passive 
+```{r}
+models <- list(
+  glm(active ~ gender_male, data = present_sample),
+  glm(active ~ age, data = present_sample),
+  glm(active ~ education, data = present_sample),
+  glm(active ~ comments_online_w1, data = present_sample),
+  # glm(active ~ comment_karma, data = present_sample),
+  glm(active ~ leftright_w1, data = present_sample),
+  glm(active ~ polinterest_w1, data = present_sample),
+  glm(active ~ affective_polarization_w1, data = present_sample),
+  glm(active ~ trust_general_1_w1, data = present_sample),
+  glm(active ~ trust_general_2_w1, data = present_sample),
+  glm(active ~ trust_general_3_w1, data = present_sample),
+  glm(active ~ trust_general_4_w1, data = present_sample)
+  # glm(active ~ mean_issue_distance_abs, data = present_sample),
+  # glm(active ~ mean_group_respectful, data = present_sample),
+  # glm(active ~ mean_group_knowledgeable, data = present_sample),
+  # glm(active ~ mean_group_polarized, data = present_sample),
+  # glm(active ~ mean_discussion_enjoyable, data = present_sample),
+  # glm(active ~ mean_discussion_toxic, data = present_sample),
+  # glm(active ~ mean_discussion_constructive, data = present_sample)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1], 
+    pval = summary(models[[i]])$coef[,4],
+    SE = summary(models[[i]])$coef[-1, 2],          
+    Predictor = predictors[i]                     
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df%>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor)))%>%
+  group_by(Predictor)%>%
+  slice(2) 
+
+comment_plot_pred_binary <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(Coefficient))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), colour = "black",
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  guides(alpha = "none")+
+  theme_bw(base_size=10)+ 
+  coord_flip()+
+  ggtitle("Comment activity binary", subtitle = "Excluding inactive users")+
+  xlab("")+
+  ylab("Change in log odds")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+comment_plot_pred_binary
+
+ggsave("output/comment_plot_pred_binary.pdf",comment_plot_pred_binary, width = 4, height = 4)
+```
+
+### Manual poisson models for count data (active only)
+```{r}
+present_sample <- scaled_sample%>%filter(active == 1)
+
+models <- list(
+  glm(comment_count ~ gender_male, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ age, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ education, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ comments_online_w1, family = poisson(link = "log"), data = present_sample),
+  # glm(comment_count ~ comment_karma, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ leftright_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ polinterest_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ affective_polarization_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ trust_general_1_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ trust_general_2_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ trust_general_3_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ trust_general_4_w1, family = poisson(link = "log"), data = present_sample)
+  # glm(comment_count ~ mean_issue_distance_abs, family = poisson(link = "log"), data = present_sample),
+  # glm(comment_count ~ mean_group_respectful, family = poisson(link = "log"), data = present_sample),
+  # glm(comment_count ~ mean_group_knowledgeable, family = poisson(link = "log"), data = present_sample),
+  # glm(comment_count ~ mean_group_polarized, family = poisson(link = "log"), data = present_sample),
+  # glm(comment_count ~ mean_discussion_enjoyable, family = poisson(link = "log"), data = present_sample),
+  # glm(comment_count ~ mean_discussion_toxic, family = poisson(link = "log"), data = present_sample),
+  # glm(comment_count ~ mean_discussion_constructive, family = poisson(link = "log"), data = present_sample)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_summary <- summary(models[[i]])
+    model_frames[[i]] <- data.frame(
+    Coefficient = model_summary$coef[-1, 1],        
+    pval = model_summary$coef[-1, 4],               
+    SE = model_summary$coef[-1, 2],                 
+    Predictor = predictors[i]                       
+  )
+}
+
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df %>%
+  mutate(Predictor = fct_inorder(rev(Predictor)))
+
+comment_plot_pred_active <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(Coefficient))) + 
+  geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "black",
+                  lwd = 1 , position = position_dodge(width = 2 / 3)) + 
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) + 
+  coord_flip() +
+  ggtitle("Comment activity", subtitle = "Poisson prediction of comment count") +
+  xlab("") +
+  ylab("Change in log number of comments")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+comment_plot_pred_active
+
+ggsave("output/comment_plot_pred_poisson.pdf", comment_plot_pred_active, width = 4, height = 4)
+```
+
+
+### Linear models (Excluding 0 and inactive)
+```{r}
+present_sample <- scaled_sample%>%filter(active == 1)
+
+mean(present_sample$comment_count)
+sd(present_sample$comment_count)
+max(present_sample$comment_count)
+
+models <- list(
+  lm_robust(comment_count ~ gender_male, data = present_sample),
+  lm_robust(comment_count ~ age, data = present_sample),
+  lm_robust(comment_count ~ education, data = present_sample),
+  lm_robust(comment_count ~ comments_online_w1, data = present_sample),
+  # lm_robust(comment_count ~ comment_karma, data = present_sample),
+  lm_robust(comment_count ~ leftright_w1, data = present_sample),
+  lm_robust(comment_count ~ polinterest_w1, data = present_sample),
+  lm_robust(comment_count ~ affective_polarization_w1, data = present_sample),
+  lm_robust(comment_count ~ trust_general_1_w1, data = present_sample),
+  lm_robust(comment_count ~ trust_general_2_w1, data = present_sample),
+  lm_robust(comment_count ~ trust_general_3_w1, data = present_sample),
+  lm_robust(comment_count ~ trust_general_4_w1, data = present_sample)
+  # lm_robust(comment_count ~ mean_issue_distance_abs, data = present_sample),
+  # lm_robust(comment_count ~ mean_group_respectful, data = present_sample),
+  # lm_robust(comment_count ~ mean_group_knowledgeable, data = present_sample),
+  # lm_robust(comment_count ~ mean_group_polarized, data = present_sample),
+  # lm_robust(comment_count ~ mean_discussion_enjoyable, data = present_sample),
+  # lm_robust(comment_count ~ mean_discussion_toxic, data = present_sample),
+  # lm_robust(comment_count ~ mean_discussion_constructive, data = present_sample)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],  
+    pval = summary(models[[i]])$coef[,4],
+    SE = summary(models[[i]])$coef[-1, 2],         
+    Predictor = predictors[i]                       
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df%>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor)))%>%
+  group_by(Predictor)%>%
+  slice(2) 
+
+
+comment_plot_pred_active_ex0 <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(Coefficient))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), colour = "black",
+                  lwd = 1/2, position = position_dodge(width = 2/3)) + 
+  guides(alpha = "none")+
+  theme_bw(base_size=10)+ 
+  coord_flip()+
+  ggtitle("Comment activity", subtitle = "Linear prediction of comment count")+
+  xlab("")+
+  ylab("Scaled beta coefficients, HC2 robust SE")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+comment_plot_pred_active_ex0
+
+ggsave("output/comment_plot_pred_active_excl0.pdf",comment_plot_pred_active_ex0, width = 4, height = 4)
+```
+
+
+### Linear models to predict Scores (Excluding 0 and inactive)
+```{r}
+present_sample <- scaled_sample%>%filter(active == 1)
+
+mean(present_sample$comment_mean_score)
+sd(present_sample$comment_mean_score)
+max(present_sample$comment_mean_score)
+
+models <- list(
+  lm_robust(comment_mean_score ~ gender_male, data = present_sample),
+  lm_robust(comment_mean_score ~ age, data = present_sample),
+  lm_robust(comment_mean_score ~ education, data = present_sample),
+  lm_robust(comment_mean_score ~ comments_online_w1, data = present_sample),
+  # lm_robust(comment_mean_score ~ comment_karma, data = present_sample),
+  lm_robust(comment_mean_score ~ leftright_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ polinterest_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ affective_polarization_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ trust_general_1_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ trust_general_2_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ trust_general_3_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ trust_general_4_w1, data = present_sample)
+  # lm_robust(comment_mean_score ~ mean_issue_distance_abs, data = present_sample),
+  # lm_robust(comment_mean_score ~ mean_group_respectful, data = present_sample),
+  # lm_robust(comment_mean_score ~ mean_group_knowledgeable, data = present_sample),
+  # lm_robust(comment_mean_score ~ mean_group_polarized, data = present_sample),
+  # lm_robust(comment_mean_score ~ mean_discussion_enjoyable, data = present_sample),
+  # lm_robust(comment_mean_score ~ mean_discussion_toxic, data = present_sample),
+  # lm_robust(comment_mean_score ~ mean_discussion_constructive, data = present_sample)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],  
+    pval = summary(models[[i]])$coef[,4],
+    SE = summary(models[[i]])$coef[-1, 2],         
+    Predictor = predictors[i]                       
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df%>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor)))%>%
+  group_by(Predictor)%>%
+  slice(2) 
+
+comment_plot_pred_active_ex0_score <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(Coefficient))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), colour = "black",
+                  lwd = 1/2, position = position_dodge(width = 2/3)) + 
+  guides(alpha = "none")+
+  theme_bw(base_size=10)+ 
+  coord_flip()+
+  ggtitle("Comment scores", subtitle = "Linear prediction of comment scores")+
+  xlab("")+
+  ylab("Scaled beta coefficients, HC2 robust SE")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+comment_plot_pred_active_ex0_score
+
+ggsave("output/comment_plot_pred_active_excl0_score.pdf",comment_plot_pred_active_ex0_score, width = 4, height = 4)
+```
+
+
+
+
+# Hurdle models for different experimental conditions (start RQ2)
+```{r, fig.width=6, fig.height=12}
+present_sample <- scaled_sample%>%filter(active2 != "inactive")
+
+# filtered data for control condition
+scaled_sample_c <- present_sample %>% filter(condition == "control")
+
+# models for control condition
+models_control <- list(
+  hurdle(comment_count ~ gender_male, data = scaled_sample_c),
+  hurdle(comment_count ~ age, data = scaled_sample_c),
+  hurdle(comment_count ~ education, data = scaled_sample_c),
+  hurdle(comment_count ~ comments_online_w1, data = scaled_sample_c),
+  hurdle(comment_count ~ comment_karma, data = scaled_sample_c),
+  hurdle(comment_count ~ leftright_w1, data = scaled_sample_c),
+  hurdle(comment_count ~ polinterest_w1, data = scaled_sample_c),
+  hurdle(comment_count ~ affective_polarization_w1, data = scaled_sample_c),
+  hurdle(comment_count ~ trust_general_1_w1, data = scaled_sample_c),
+  hurdle(comment_count ~ trust_general_2_w1, data = scaled_sample_c),
+  hurdle(comment_count ~ trust_general_3_w1, data = scaled_sample_c),
+  hurdle(comment_count ~ trust_general_4_w1, data = scaled_sample_c),
+  hurdle(comment_count ~ mean_issue_distance_abs, data = scaled_sample_c),
+  hurdle(comment_count ~ mean_group_respectful, data = scaled_sample_c),
+  hurdle(comment_count ~ mean_group_knowledgeable, data = scaled_sample_c),
+  hurdle(comment_count ~ mean_group_polarized, data = scaled_sample_c),
+  hurdle(comment_count ~ mean_discussion_enjoyable, data = scaled_sample_c),
+  hurdle(comment_count ~ mean_discussion_toxic, data = scaled_sample_c),
+  hurdle(comment_count ~ mean_discussion_constructive, data = scaled_sample_c)
+)
+
+model_frames_control <- list()
+
+for (i in seq_along(models_control)) {
+  model_summary <- summary(models_control[[i]])
+  
+  count_model_coef <- as.data.frame(model_summary$coefficients$count)
+  count_model_coef$Predictor <- predictors[i]
+  count_model_coef$Model <- "Count Model"  
+  count_model_coef <- count_model_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>% 
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
+  zero_hurdle_coef$Predictor <- predictors[i]
+  zero_hurdle_coef$Model <- "Zero Hurdle Model"  
+  zero_hurdle_coef <- zero_hurdle_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>% 
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  model_frames_control[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
+}
+
+combined_df_control <- bind_rows(model_frames_control) %>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+comment_plot_pred_c <- ggplot(combined_df_control, aes(x = rev(Predictor), alpha = AlphaValue)) +
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "grey", lwd = 1) +
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) +
+  coord_flip() +
+  facet_wrap(~ Model, ncol = 2, scales = "free_x") +
+  ggtitle("Control condition", subtitle = "Prediction of user-level discussion participation") +
+  xlab("") +
+  ylab("Zero hurdle models for count data regression")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+# filtered data for moderation condition
+scaled_sample_m <- present_sample %>% filter(condition == "moderation")
+
+# Models for moderation condition
+models_moderation <- list(
+  hurdle(comment_count ~ gender_male, data = scaled_sample_m),
+  hurdle(comment_count ~ age, data = scaled_sample_m),
+  hurdle(comment_count ~ education, data = scaled_sample_m),
+  hurdle(comment_count ~ comments_online_w1, data = scaled_sample_m),
+  hurdle(comment_count ~ comment_karma, data = scaled_sample_m),
+  hurdle(comment_count ~ leftright_w1, data = scaled_sample_m),
+  hurdle(comment_count ~ polinterest_w1, data = scaled_sample_m),
+  hurdle(comment_count ~ affective_polarization_w1, data = scaled_sample_m),
+  hurdle(comment_count ~ trust_general_1_w1, data = scaled_sample_m),
+  hurdle(comment_count ~ trust_general_2_w1, data = scaled_sample_m),
+  hurdle(comment_count ~ trust_general_3_w1, data = scaled_sample_m),
+  hurdle(comment_count ~ trust_general_4_w1, data = scaled_sample_m),
+  hurdle(comment_count ~ mean_issue_distance_abs, data = scaled_sample_m),
+  hurdle(comment_count ~ mean_group_respectful, data = scaled_sample_m),
+  hurdle(comment_count ~ mean_group_knowledgeable, data = scaled_sample_m),
+  hurdle(comment_count ~ mean_group_polarized, data = scaled_sample_m),
+  hurdle(comment_count ~ mean_discussion_enjoyable, data = scaled_sample_m),
+  hurdle(comment_count ~ mean_discussion_toxic, data = scaled_sample_m),
+  hurdle(comment_count ~ mean_discussion_constructive, data = scaled_sample_m)
+)
+
+
+model_frames_moderation <- list()
+for (i in seq_along(models_moderation)) {
+  model_summary <- summary(models_moderation[[i]])
+  
+    count_model_coef <- as.data.frame(model_summary$coefficients$count)
+  count_model_coef$Predictor <- predictors[i]
+  count_model_coef$Model <- "Count Model"   
+  count_model_coef <- count_model_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
+  zero_hurdle_coef$Predictor <- predictors[i]
+  zero_hurdle_coef$Model <- "Zero Hurdle Model"   
+  zero_hurdle_coef <- zero_hurdle_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  model_frames_moderation[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
+}
+
+combined_df_moderation <- bind_rows(model_frames_moderation) %>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+comment_plot_pred_m <- ggplot(combined_df_moderation, aes(x = rev(Predictor), alpha = AlphaValue)) +
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "#6699FF", lwd = 1) +
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) +
+  coord_flip() +
+  facet_wrap(~ Model, ncol = 2, scales = "free_x") +
+  ggtitle("Moderation condition", subtitle = "Prediction of user-level discussion participation") +
+  xlab("") +
+  ylab("Zero hurdle models for count data regression")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+
+# filtered data for incentives condition
+scaled_sample_i <- present_sample %>% filter(condition == "incentives")
+
+# Models for incentives condition
+models_incentives <- list(
+  hurdle(comment_count ~ gender_male, data = scaled_sample_i),
+  hurdle(comment_count ~ age, data = scaled_sample_i),
+  hurdle(comment_count ~ education, data = scaled_sample_i),
+  hurdle(comment_count ~ comments_online_w1, data = scaled_sample_i),
+  hurdle(comment_count ~ comment_karma, data = scaled_sample_i),
+  hurdle(comment_count ~ leftright_w1, data = scaled_sample_i),
+  hurdle(comment_count ~ polinterest_w1, data = scaled_sample_i),
+  hurdle(comment_count ~ affective_polarization_w1, data = scaled_sample_i),
+  hurdle(comment_count ~ trust_general_1_w1, data = scaled_sample_i),
+  hurdle(comment_count ~ trust_general_2_w1, data = scaled_sample_i),
+  hurdle(comment_count ~ trust_general_3_w1, data = scaled_sample_i),
+  hurdle(comment_count ~ trust_general_4_w1, data = scaled_sample_i),
+  hurdle(comment_count ~ mean_issue_distance_abs, data = scaled_sample_i),
+  hurdle(comment_count ~ mean_group_respectful, data = scaled_sample_i),
+  hurdle(comment_count ~ mean_group_knowledgeable, data = scaled_sample_i),
+  hurdle(comment_count ~ mean_group_polarized, data = scaled_sample_i),
+  hurdle(comment_count ~ mean_discussion_enjoyable, data = scaled_sample_i),
+  hurdle(comment_count ~ mean_discussion_toxic, data = scaled_sample_i),
+  hurdle(comment_count ~ mean_discussion_constructive, data = scaled_sample_i)
+)
+
+
+model_frames_incentives <- list()
+for (i in seq_along(models_incentives)) {
+  model_summary <- summary(models_incentives[[i]])
+  
+  count_model_coef <- as.data.frame(model_summary$coefficients$count)
+  count_model_coef$Predictor <- predictors[i]
+  count_model_coef$Model <- "Count Model"   
+  count_model_coef <- count_model_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
+  zero_hurdle_coef$Predictor <- predictors[i]
+  zero_hurdle_coef$Model <- "Zero Hurdle Model"   
+  zero_hurdle_coef <- zero_hurdle_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  model_frames_incentives[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
+}
+
+combined_df_incentives <- bind_rows(model_frames_incentives) %>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+comment_plot_pred_i <- ggplot(combined_df_incentives, aes(x = rev(Predictor), alpha = AlphaValue)) +
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "#C5701A", lwd = 1) +
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) +
+  coord_flip() +
+  facet_wrap(~ Model, ncol = 2, scales = "free_x") +
+  ggtitle("Incentives condition", subtitle = "Prediction of user-level discussion participation") +
+  xlab("") +
+  ylab("Zero hurdle models for count data regression")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+combi_conditions <- grid.arrange(comment_plot_pred_c, comment_plot_pred_m, comment_plot_pred_i, nrow = 3)
+
+ggsave("../output/combi_comment_plot_pred_conditions_hurdle.pdf", combi_conditions, width = 8, height = 12)
+```
+
+## Hurdle models for different conditions simple for main manuscript
+```{r, fig.width=12, fig.height=3}
+present_sample <- scaled_sample%>%filter(active2 != "inactive")
+
+# filtered data for control condition
+scaled_sample_c <- present_sample %>% filter(condition == "control")
+
+models_control <- list(
+  hurdle(comment_count ~ gender_male, data = scaled_sample_c),
+  hurdle(comment_count ~ polinterest_w1, data = scaled_sample_c),
+  hurdle(comment_count ~ mean_group_knowledgeable, data = scaled_sample_c),
+  hurdle(comment_count ~ mean_discussion_toxic, data = scaled_sample_c)
+)
+
+predictors <- c("Gender (male)",  "Political interest", 
+                "Group knowledgeable", "Discussion toxic")
+
+model_frames_control <- list()
+
+for (i in seq_along(models_control)) {
+  model_summary <- summary(models_control[[i]])
+  
+  count_model_coef <- as.data.frame(model_summary$coefficients$count)
+  count_model_coef$Predictor <- predictors[i]
+  count_model_coef$Model <- "Count Model"   
+  count_model_coef <- count_model_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
+  zero_hurdle_coef$Predictor <- predictors[i]
+  zero_hurdle_coef$Model <- "Zero Hurdle Model"   
+  zero_hurdle_coef <- zero_hurdle_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  model_frames_control[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
+}
+
+combined_df_control <- bind_rows(model_frames_control) %>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+comment_plot_pred_c <- ggplot(combined_df_control, aes(x = rev(Predictor), alpha = AlphaValue)) +
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "grey", lwd = 1) +
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) +
+  coord_flip() +
+  ggtitle("Control condition", subtitle = "Prediction of discussion participation") +
+  xlab("") +
+  ylab("")+
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank()) 
+
+# filtered data for moderation condition
+scaled_sample_m <- present_sample %>% filter(condition == "moderation")
+
+models_moderation <- list(
+  hurdle(comment_count ~ gender_male, data = scaled_sample_m),
+  hurdle(comment_count ~ polinterest_w1, data = scaled_sample_m),
+  hurdle(comment_count ~ mean_group_knowledgeable, data = scaled_sample_m),
+  hurdle(comment_count ~ mean_discussion_toxic, data = scaled_sample_m)
+)
+
+
+model_frames_moderation <- list()
+for (i in seq_along(models_moderation)) {
+  model_summary <- summary(models_moderation[[i]])
+  
+    count_model_coef <- as.data.frame(model_summary$coefficients$count)
+  count_model_coef$Predictor <- predictors[i]
+  count_model_coef$Model <- "Count Model"   
+  count_model_coef <- count_model_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
+  zero_hurdle_coef$Predictor <- predictors[i]
+  zero_hurdle_coef$Model <- "Zero Hurdle Model"   
+  zero_hurdle_coef <- zero_hurdle_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  model_frames_moderation[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
+}
+
+combined_df_moderation <- bind_rows(model_frames_moderation) %>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+comment_plot_pred_m <- ggplot(combined_df_moderation, aes(x = rev(Predictor))) +
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "#6699FF", lwd = 1) +
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) +
+  coord_flip() +
+  ggtitle("Moderation condition", subtitle = "Prediction of discussion participation") +
+  xlab("") +
+  ylab("")+
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank()) 
+
+
+scaled_sample_i <- present_sample %>% filter(condition == "incentives")
+
+models_incentives <- list(
+  hurdle(comment_count ~ gender_male, data = scaled_sample_i),
+  hurdle(comment_count ~ polinterest_w1, data = scaled_sample_i),
+  hurdle(comment_count ~ mean_group_knowledgeable, data = scaled_sample_i),
+  hurdle(comment_count ~ mean_discussion_toxic, data = scaled_sample_i)
+)
+
+
+model_frames_incentives <- list()
+for (i in seq_along(models_incentives)) {
+  model_summary <- summary(models_incentives[[i]])
+  
+  count_model_coef <- as.data.frame(model_summary$coefficients$count)
+  count_model_coef$Predictor <- predictors[i]
+  count_model_coef$Model <- "Count Model"   
+  count_model_coef <- count_model_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
+  zero_hurdle_coef$Predictor <- predictors[i]
+  zero_hurdle_coef$Model <- "Zero Hurdle Model"   
+  zero_hurdle_coef <- zero_hurdle_coef %>% 
+    filter(row.names(.) != "(Intercept)") %>%   
+    rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
+  
+  model_frames_incentives[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
+}
+
+combined_df_incentives <- bind_rows(model_frames_incentives) %>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+comment_plot_pred_i <- ggplot(combined_df_incentives, aes(x = rev(Predictor))) +
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "#C5701A", lwd = 1) +
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) +
+  coord_flip() +
+  ggtitle("Incentives condition",subtitle = "Prediction of discussion participation") +
+  xlab("") +
+  ylab("")+
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank()) 
+
+combi_conditions <- grid.arrange(comment_plot_pred_m, comment_plot_pred_i, nrow = 1)
+
+ggsave("../output/combi_comment_plot_pred_conditions_hurdle_simple.pdf", combi_conditions, width = 10, height = 3)
+```
+
+## Baseline Balance 
+```{r}
+# variables balance table
+covariates <- c("age", "gender", "education","time_online_w1" , "social_media_w1" , "comments_online_w1" ,
+ "leftright_w1"                  ,  "polinterest_w1"                , "affective_pol_1_w1"             ,
+ "affective_pol_2_w1"            ,  "issue_attitudes_loan_w1"       , "issue_attitudes_airbnb_w1"      ,
+ "issue_attitudes_minwage_w1"    ,  "issue_attitudes_ukraine_w1"    , "issue_attitudes_ubi_w1"         ,
+ "issue_attitudes_climate_w1"    ,  "issue_attitudes_fur_w1"        , "issue_attitudes_renewable_w1"   ,
+ "issue_attitudes_gaza_w1"       ,  "issue_attitudes_vegetarian_w1" , "issue_attitudes_gender_w1"      ,
+ "issue_attitudes_sexwork_w1"    ,  "issue_attitudes_vaccine_w1"    , "issue_attitudes_healthcare_w1"  ,
+ "issue_attitudes_immigration_w1",  "issue_attitudes_guns_w1"       , "issue_attitudes_deathpenalty_w1",
+ "issue_attitudes_bodycams_w1"   ,  "issue_attitudes_ai_w1"         , "issue_attitudes_socialmedia_w1" ,
+ "issue_knowledge_loan_w1"       ,  "issue_knowledge_airbnb_w1"     , "issue_knowledge_minwage_w1"     ,
+ "issue_knowledge_ukraine_w1"    ,  "issue_knowledge_ubi_w1"        , "issue_knowledge_climate_w1"     ,
+ "issue_knowledge_fur_w1"        ,  "issue_knowledge_renewable_w1"  , "issue_knowledge_mideast_w1"     ,
+ "issue_knowledge_vegetarian_w1" ,  "issue_knowledge_gender_w1"     , "issue_knowledge_sexwork_w1"     ,
+ "issue_knowledge_vaccine_w1"    ,  "issue_knowledge_healthcare_w1" , "issue_knowledge_immigration_w1" ,
+ "issue_knowledge_guns_w1"       ,  "issue_knowledge_deathpenalty_w1", "issue_knowledge_bodycams_w1"    ,
+ "issue_knowledge_ai_w1"         ,  "issue_knowledge_socialmedia_w1", "political_efficacy_1_w1"        ,
+ "political_efficacy_2_w1"       ,  "political_efficacy_3_w1"       , "trust_general_1_w1"             ,
+ "trust_general_2_w1"            ,  "trust_general_3_w1"            , "trust_general_4_w1"             ,
+ "pol_cynicism_w1", "affective_polarization_w1"  ,     "efficacy_w1" ,"comment_karma","comment_count" ,                  "comment_mean_lenght"   ,   "comment_mean_score"  ,     "comment_mean_tox"  ,  "ex_comment_count",  "ex_comment_mean_score"  ,  "ex_comment_mean_tox"  ,    "ex_comment_mean_lenght"  )
+
+table1 <- CreateTableOne(vars = covariates, strata = "condition", data = full_data)
+
+latex_table <- print(table1, smd = TRUE, printToggle = FALSE)
+rownames(latex_table) <- gsub("\\(mean \\(SD\\)\\)", "", rownames(latex_table))
+
+knitr::kable(latex_table[, -grep("test", colnames(latex_table))], 
+                      format = "html", booktabs = TRUE)
+
+```
+
+## Display "Profiles"
+
+```{r}
+profile_sample <- scaled_sample %>%
+  mutate(group = case_when(comment_count == 0 ~ "Never Comment",
+      comment_count > 0 & comment_count <= quantile(comment_count[comment_count > 0], 0.3) ~ "Infrequent Commenter",
+      comment_count > quantile(comment_count[comment_count > 0], 0.7) ~ "Frequent Commenter",
+      TRUE ~ NA_character_))
+
+table(profile_sample$group)
+
+profile_sample <- profile_sample %>% filter(!is.na(group))%>%
+  mutate(gender_male = as.numeric(as.character(gender_male)))%>%
+  rename_with(~ gsub("_", ".", .x))
+
+# Calculate means and confidence intervals for the specified variables by group
+summary_table <- profile_sample %>%
+  group_by(group) %>%
+  summarise(across(c(gender.male, comments.online.w1, polinterest.w1, 
+        mean.group.respectful, mean.group.knowledgeable, mean.group.polarized,
+        mean.discussion.enjoyable, mean.discussion.toxic, mean.discussion.constructive),
+      list(mean = ~mean(.x, na.rm = TRUE), 
+           lower = ~mean(.x, na.rm = TRUE) - qt(0.975, df=n()-1) * (sd(.x, na.rm = TRUE)/sqrt(n())), 
+           upper = ~mean(.x, na.rm = TRUE) + qt(0.975, df=n()-1) * (sd(.x, na.rm = TRUE)/sqrt(n())))))%>%
+  pivot_longer(-group, names_to = c("variable", "value"), names_sep = "_", names_repair = "unique")%>%
+  pivot_wider(names_from = value...3, values_from = value...4)
+
+variable_labels <- c(
+  gender.male = "Male Gender",
+  comments.online.w1 = "Commenting Online",
+  polinterest.w1 = "Political Interest",
+  mean.group.respectful = "Group respectful",
+  mean.group.knowledgeable = "Group knowledgeable",
+  mean.group.polarized = "Group polarized",
+  mean.discussion.enjoyable = "Discussions enjoyable",
+  mean.discussion.toxic = "Discussions toxic",
+  mean.discussion.constructive = "Discussions constructive"
+)
+
+summary_table$variable <- factor(summary_table$variable,
+  levels = names(variable_labels), labels = variable_labels)
+
+profiles <- ggplot(summary_table, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.8) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2, position = position_dodge(0.9)) +
+  facet_wrap(~variable, scales = "free_y", ncol = 3) +  # Use facet_wrap with variable
+  labs(title = "Profiles of three user groups", 
+    x = "",
+    y = "Mean Values by Group with 95% Confidence Intervals") +
+  theme_minimal() +
+  theme(legend.position = "bottom", axis.text.x=element_blank(),
+    strip.text = element_text(size = 10)) +
+  scale_fill_manual(values = c("#334c7f","#b2ccff","lightgrey"))
+
+profiles
+
+ggsave("../output/profiles_participation.pdf", profiles, width = 10, height = 6)
+
+```
+
