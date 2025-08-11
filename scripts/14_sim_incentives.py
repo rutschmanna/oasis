@@ -88,7 +88,7 @@ async def main():
 
     time_factor = 60/args.clock_factor
     time_steps = int(args.time_steps*time_factor)
-    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/{n_run}/reddit-sim_{args.model_name}_subreddit-{args.subreddit}-{args.time_steps}h/"
+    db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/{n_run}_incentive/reddit-sim_{args.model_name}_subreddit-{args.subreddit}-{args.time_steps}h/"
     agent_profile_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/reddit/seed_personas_subreddit_{args.subreddit}.json"
 
     script_log.info(f"Time factor: {time_factor}")
@@ -115,8 +115,8 @@ async def main():
     distribution_fit = fit.lognormal
 
     # Load simulation statistics df
-    pathlib.Path(f"/../abyss/home/oasis/data/{n_run}").mkdir(exist_ok=True)
-    sim_stats_path = f"/../abyss/home/oasis/data/{n_run}/sim_metrics.csv"
+    pathlib.Path(f"/../abyss/home/oasis/data/{n_run}_incentive").mkdir(exist_ok=True)
+    sim_stats_path = f"/../abyss/home/oasis/data/{n_run}_incentive/sim_metrics.csv"
     try:
         sim_stats = pd.read_csv(sim_stats_path)
     except:
