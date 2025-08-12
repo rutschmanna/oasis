@@ -141,7 +141,7 @@ async def main():
     )
 
     topics = {
-        1: "The US should condemn Israel’s military actions in Gaza as acts of genocide and impose full sanctions.",
+        1: "The US should condemn Israel's military actions in Gaza as acts of genocide and impose full sanctions.",
         2: "Prostitution should be illegal.",
         3: "Things like gender-neutral language and stating pronouns are silly issues.",
         4: "The death penalty should be reestablished US-wide.",
