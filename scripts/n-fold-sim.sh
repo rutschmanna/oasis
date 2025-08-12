@@ -12,7 +12,7 @@ do
     done
 done
 
-for r in 1 2;
+for r in $(seq 1 10);
 do
     for i in 2 5;
     do
@@ -24,7 +24,7 @@ do
     done
 done
 
-for r in 1 2;
+for r in $(seq 1 10);
 do
     for i in 3 4;
     do
