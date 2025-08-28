@@ -86,6 +86,7 @@ async def main():
         # ActionType.UNMUTE,
     ]
 
+    # custom .db naming
     time_factor = 60/args.clock_factor
     time_steps = int(args.time_steps*time_factor)
     db_dir_path = f"/../abyss/home/oasis/oasis-rutschmanna/data/dbs/{n_run}/reddit-sim_{args.model_name}_control_subreddit-{args.subreddit}-{args.time_steps}h/"
@@ -122,6 +123,7 @@ async def main():
     except:
         sim_stats = pd.DataFrame()
 
+    # define the simulation paltform "hyperparameters"
     env = oasis.make(
         platform=Platform(
             db_path=db_path,
@@ -140,6 +142,7 @@ async def main():
         semaphore=16,
     )
 
+    # define available seed post for later use
     topics = {
         1: "The US should condemn Israel's military actions in Gaza as acts of genocide and impose full sanctions.",
         2: "Prostitution should be illegal.",
@@ -162,14 +165,16 @@ async def main():
         19: "The government should not invest in renewable energy.",
         20: "Airbnb should be banned in cities."
     }
- 
+
+    # load the seed persona data for the pre-simulation layer
     with open(agent_profile_path, "r") as f:
         profile_data = json.load(f)
 
     profile_data_df = pd.DataFrame(profile_data).drop(columns="bio")
     seed_user_ids = profile_data_df["username"]
     profile_data_df.set_index("username", inplace=True)
-    
+
+    # define prompt for pre-simulation layer
     sys_prompt = """
     You are a Reddit user. The following survey contains several questions and your answers. The answers are contained between '<' and '>' (eg. question: 'How much time do you spend online (browsing the web, using social media, etc.)?', answer: '<multiple hours daily>'). This survey constitutes your persona.
     This is your survey:
@@ -190,6 +195,7 @@ async def main():
     {}
     """
 
+    # empty list for storage of activated user IDs
     joined_agents = []
 
     client = OpenAI(
@@ -197,6 +203,7 @@ async def main():
         base_url="http://127.0.0.1:8002/v1",
     )
 
+    # qery LLM for joined agents - pre-simulation layer 
     for i in tqdm(seed_user_ids):
         completion = client.chat.completions.create(
             model=args.model_name,
@@ -216,6 +223,7 @@ async def main():
     # Run the environment
     await env.reset()
 
+    # initialize the intervention
     action_1 = SingleAction(
             agent_id=0,
             action=ActionType.CREATE_POST,
@@ -236,11 +244,15 @@ async def main():
     # Perform the actions
     script_log.info(f"{len(activated_agents)} Agents activated")
     script_log.info(f"Topic {args.topic} - Intervention executed")
+
+    # simulate the environment step
     await env.step(env_action_1)
-    
+
+    # run the rest of the simulation steps
     for _ in range(time_steps):
         script_log.info(f"Topic {args.topic} - Time step {_+1} initiated - {env.platform.sandbox_clock.time_transfer(datetime.now(), env.platform.start_time)}")
         script_log.info(f"{len(joined_agents)} Agents participating in Topic {args.topic}")
+        # call activation function for activated agent IDs
         activated_agents, disconnected_agents = activation_function(
             sample_data.set_index("ParticipantID"),
             db_path,
@@ -250,6 +262,7 @@ async def main():
             joined_agents=joined_agents,
         )
 
+        # log and run simulation step with activated agents (if available)
         if len(activated_agents) > 0:
             env_action_empty = EnvAction(
                 activate_agents=activated_agents
@@ -257,6 +270,7 @@ async def main():
             script_log.info(f"{len(activated_agents)} agent(s) activated")
             script_log.info(f"{len(disconnected_agents)} agent(s) disconnected: {disconnected_agents}")
             await env.step(env_action_empty)
+        # sleep for 60s ~ 1h simulation time
         else:
             sleep = random.randint(
                 int((time_factor*0.8)*60),
@@ -268,6 +282,7 @@ async def main():
     # Close the environment
     await env.close()
 
+    # save joined, deactivated, silent stats
     sim_stats_topic = pd.DataFrame(
         {
             "subreddit": args.subreddit,

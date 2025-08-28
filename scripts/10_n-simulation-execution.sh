@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# performs 10 simulation runs for the control (1&6), moderation (2&5), and incentives (3&4) conditino a 20 topics
 for r in $(seq 1 10);
 do
     for i in 1 6;

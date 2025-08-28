@@ -7,6 +7,7 @@ import pathlib
 
 from utils.processing_utils import batch_convert_db_contents, load_db_json_data
 
+# parse terminal arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--start-str", help="str of target sim directory", type=str)
 parser.add_argument("--subdir", help="str of optional sub-directory", type=str, default=".")
@@ -15,8 +16,10 @@ args = parser.parse_args()
 np.set_printoptions(legacy='1.25')
 start_str = args.start_str
 
+# convert .db file content to .json
 batch_convert_db_contents(start_str=start_str, subdir=args.subdir)
 
+# load df and json format of sim data
 sim_discussions, sim_user, sim_trace = load_db_json_data(
     f"/../abyss/home/oasis/oasis-rutschmanna/data/db_json/{args.subdir}/",
     start_str,
@@ -28,6 +31,7 @@ sim_discussions_json, sim_user_json, sim_trace_json = load_db_json_data(
     start_str
 )
 
+# mapping for the nubmer of users per sub
 subreddit_mapping = {
     1: 80,
     2: 85,
@@ -37,6 +41,7 @@ subreddit_mapping = {
     6: 100
 }
 
+# mapping for each sub's conditon
 sim_condition_mapping = {
     1: "control",
     2: "moderation",
@@ -46,6 +51,7 @@ sim_condition_mapping = {
     6: "control",
 }
 
+# concatenate data into dfs
 sim_discussions_data = pd.DataFrame()
 sim_user_data = pd.DataFrame()
 sim_trace_data = pd.DataFrame()
@@ -59,6 +65,7 @@ for i in sim_user.values():
 for i in sim_trace.values():
     sim_trace_data = pd.concat([sim_trace_data, i]).reset_index(drop=True)
 
+# create additional variables
 sim_discussions_data["condition"] = sim_discussions_data["subreddit"].map(sim_condition_mapping)
 sim_discussions_data["sim_score_comment"] = sim_discussions_data["num_likes"] - sim_discussions_data["num_dislikes"]
 sim_discussions_data["sim_comment_length"] = sim_discussions_data["content"].apply(len)
@@ -67,6 +74,7 @@ sim_discussions_data["sim_comment_count"] = sim_discussions_data.groupby("seed_u
 sim_discussions_data["sim_comment_mean_length"] = sim_discussions_data.groupby("seed_user_id")["sim_comment_length"].transform("mean").apply(int)
 sim_discussions_data["sim_comment_mean_score"] = sim_discussions_data.groupby("seed_user_id")["sim_score_comment"].transform("mean").apply(lambda x: round(x, 3))
 
+# mapping of seed subs to condition
 condition_mapping = {
     "DiscussPolitics1": "control",
     "DiscussPolitics2": "moderation",
@@ -76,8 +84,7 @@ condition_mapping = {
     "DiscussPolitics6": "control",
 }
 
-# Load User data and discussions data
-
+# Load seed user data and discussions data
 user_data = pd.read_csv(
     "/../abyss/home/oasis/oswald-et-al_2025/sample_anon.csv",
     index_col=0
@@ -114,6 +121,7 @@ user_data.fillna(0, inplace=True)
 user_data.reset_index(drop=True, inplace=True)
 print(len(user_data))
 
+# merge sim and seed user data
 sim_user_data = sim_user_data.merge(user_data[[
     "ParticipantID",
     "subreddit",
@@ -126,14 +134,13 @@ sim_user_data = sim_user_data.merge(user_data[[
 sim_user_data.rename(columns={"user_name":"seed_user_id"},
                      inplace=True)
 
+# create additional variables
 sim_user_data.drop(columns="ParticipantID", inplace=True)
-
 sim_user_data["subreddit"] = sim_user_data["subreddit"].apply(lambda x: int(x[-1]))
-
 sim_user_data["condition"] = sim_user_data["subreddit"].map(sim_condition_mapping)
-
 sim_user_data["n_agents"] = sim_user_data["subreddit"].map(subreddit_mapping)
 
+# merge sim user and discussion data
 sim_user_data = sim_user_data.merge(sim_discussions_data[[
     "seed_user_id",
     "sim_comment_count",
@@ -143,6 +150,7 @@ sim_user_data = sim_user_data.merge(sim_discussions_data[[
 
 sim_user_data.fillna(0, inplace=True)
 
+# seelct only relevant columns
 sim_user_data = sim_user_data[[
     "seed_user_id",
     "user_id",
@@ -188,6 +196,7 @@ sim_trace_data = sim_trace_data[[
     "info",
 ]]
 
+# write data into .csv files
 discussions_data = discussions_data[discussions_data["ParticipantID"].isin(sim_user_data["seed_user_id"])]
 user_data = user_data[user_data["ParticipantID"].isin(sim_user_data["seed_user_id"])]
 
