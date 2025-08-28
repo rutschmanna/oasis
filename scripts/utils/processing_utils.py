@@ -11,6 +11,7 @@ import time
 from tqdm import tqdm
 import utils.simulation_utils as su
 
+# define seed posts for later use
 topics = {
         1: "The US should condemn Israel’s military actions in Gaza as acts of genocide and impose full sanctions.",
         2: "Prostitution should be illegal.",
@@ -34,6 +35,7 @@ topics = {
         20: "Airbnb should be banned in cities."
     }
 
+# converts .db files to .json
 def convert_db_contents(db_file,
                         base_path="/../abyss/home/oasis/oasis-rutschmanna/data"):
     
@@ -66,6 +68,7 @@ def convert_db_contents(db_file,
 
     conn.close()
 
+# converts a whole directory's .db files to .json
 def batch_convert_db_contents(
     start_str,
     base_path="/../abyss/home/oasis/oasis-rutschmanna/data",
@@ -115,6 +118,7 @@ def batch_convert_db_contents(
             
                 conn.close()
 
+# loads the .json data; creates user, discussion, trace data and returns it either as .csv or .json
 def load_db_json_data(db_json_path, start_str="reddit-sim_",
                       to_df=False):
     
@@ -244,6 +248,7 @@ def load_db_json_data(db_json_path, start_str="reddit-sim_",
 
 #     return data
 
+# depending on input data calls the correct structure_analysis function
 def structure_analysis(data, n=-1, root_id="parent_comment_id"):
     if isinstance(data, pd.DataFrame):
         return structure_analysis_df(data, root_id)
@@ -253,6 +258,7 @@ def structure_analysis(data, n=-1, root_id="parent_comment_id"):
         else:
             return structure_analysis_json(data, n, root_id)
 
+# performs the network structure analysis for .json data
 def structure_analysis_json(data, n, root_id="parent_comment_id"):
 
     # Interaction Volume
@@ -285,6 +291,7 @@ def structure_analysis_json(data, n, root_id="parent_comment_id"):
 
     return volume, width, depth, scale, active, comment_lengths
 
+# conducts network structure analysis for pandas df input
 def structure_analysis_df(data, root_id="parent_comment_id"):
     
     # Interaction Volume
@@ -321,6 +328,7 @@ def structure_analysis_df(data, root_id="parent_comment_id"):
 
     return volume, width, depth, scale, active, comment_lengths
 
+# recursively determines the depth of .json network input
 def recursive_depth_json(data, parent_comment_id=-1, current_depth=0,
                    id_col="comment_id", root_col="parent_comment_id"):
     max_depth = current_depth
@@ -337,6 +345,7 @@ def recursive_depth_json(data, parent_comment_id=-1, current_depth=0,
             
     return max_depth
 
+# recursively determines the depth of pandas df network input
 def recursive_depth_df(data, parent_comment_id=-1, current_depth=0,
                    id_col="comment_id", root_col="parent_comment_id"):
     max_depth = current_depth
@@ -353,6 +362,7 @@ def recursive_depth_df(data, parent_comment_id=-1, current_depth=0,
             
     return max_depth
 
+# returns mean and fisher score; deprecated
 def fisher(data):
     log_p = np.sum(np.log(data["p"]))
     X2 = -2 * log_p
@@ -362,6 +372,7 @@ def fisher(data):
     
     return mean_stat, p_value_fisher
 
+# querys the perspective api for .json input
 def query_perspective_json(data, api_key):
     client = discovery.build(
       "commentanalyzer",
@@ -383,6 +394,7 @@ def query_perspective_json(data, api_key):
 
     return data
 
+# querys the perspective api for pandas df input
 def query_perspective_df(data, content_col, api_key):
     data = data.copy()
     client = discovery.build(
@@ -409,6 +421,7 @@ def query_perspective_df(data, content_col, api_key):
 
     return data
 
+# querys the perspective api; deprecated
 def query_perspective(data, api_key):
     try:
         client = discovery.build(

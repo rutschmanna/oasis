@@ -2,6 +2,7 @@ import sqlite3
 import pandas as pd
 import random
 
+# function generates persona using seed user info
 def generate_personas(data, subreddit):
     """
     Uses the items from Oswald et al's (2025) survey and a collection 
@@ -14,7 +15,7 @@ def generate_personas(data, subreddit):
     data: .csv file containing the original user survey responses
     """
 
-    # Dict that map survey responses to their respective str
+    # Dict that map survey item scales to their respective str
     gender_dict = {
         1: "Male",
         2: "Female",
