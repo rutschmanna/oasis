@@ -1,3 +1,21 @@
+## Fork note
+
+This is a **fork of [CAMEL-AI/OASIS](https://github.com/camel-ai/oasis)**
+([paper](https://arxiv.org/abs/2411.11581)). All credit for the OASIS
+framework belongs to its original authors; the upstream README is preserved
+in full below.
+
+I extended OASIS for my M.Sc. thesis, *Simulating Public Online Discourse
+Using Large Language Models* (University of Konstanz, 2025). My additions:
+
+- Development and implementation of a research-based agent activation protocol
+- Custom simulation scripts implementing the experimental design of [Oswald et al.](https://www.science.org/doi/10.1126/sciadv.ady8022)
+- Bug fixes and LLM prompt overhauls
+
+[Contact me](mailto:rutschmanna@pm.me) for the full manuscript · [Diff against upstream](https://github.com/camel-ai/oasis/compare/main...rutschmanna:oasis:main)
+
+---
+
 <div align="center">
   <a href="https://www.camel-ai.org/">
     <img src="assets/banner.png" alt=banner>
